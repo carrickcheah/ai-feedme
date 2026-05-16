@@ -457,31 +457,36 @@ function ChatPanel({ open, onClose }) {
   );
 }
 
-// ── chat icon button (used in BottomBar) ─────────────────────
-function ChatIconButton({ onClick }) {
+// ── chat icon button (compact circular bubble) ───────────────
+// `size` lets us drop the same button into the top FloatingActions row
+// (size=38 to match the dots/info chips) and elsewhere if needed.
+function ChatIconButton({ onClick, size = 38 }) {
+  const inner = Math.max(24, size - 8);
+  const iconSize = Math.max(16, Math.round(size * 0.5));
   return (
     <button
       onClick={onClick}
       style={{
-        width: 52,
-        height: 52,
+        width: size,
+        height: size,
         borderRadius: "50%",
         border: "none",
         background: "#fff",
-        boxShadow: "0 4px 10px rgba(0,0,0,0.12)",
+        boxShadow: "0 3px 10px rgba(0,0,0,0.10)",
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         flexShrink: 0,
         position: "relative",
+        padding: 0,
       }}
       aria-label="Open chat assistant"
     >
       <div
         style={{
-          width: 44,
-          height: 44,
+          width: inner,
+          height: inner,
           borderRadius: "50%",
           background: "linear-gradient(180deg,#ff8a3d,#f47216)",
           display: "flex",
@@ -489,16 +494,16 @@ function ChatIconButton({ onClick }) {
           justifyContent: "center",
         }}
       >
-        <IconChat />
+        <IconChat size={iconSize} />
       </div>
-      {/* small pulse dot */}
+      {/* online pulse dot */}
       <span
         style={{
           position: "absolute",
-          top: 4,
-          right: 4,
-          width: 10,
-          height: 10,
+          top: 2,
+          right: 2,
+          width: 8,
+          height: 8,
           borderRadius: "50%",
           background: "#19a34a",
           border: "2px solid #fff",

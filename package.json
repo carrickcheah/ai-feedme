@@ -18,7 +18,9 @@
     "infra:down": "docker compose down",
     "infra:logs": "docker compose logs -f",
     "infra:reset": "docker compose down -v && docker compose up -d",
-    "eval": "promptfoo eval"
+    "eval": "set -a && . ./.env && set +a && npx --no-install promptfoo eval --no-cache",
+    "eval:happy": "set -a && . ./.env && set +a && npx --no-install promptfoo eval -c evals/golden-set/happy-path.yaml --no-cache",
+    "eval:view": "npx --no-install promptfoo view"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",

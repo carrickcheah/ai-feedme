@@ -332,7 +332,7 @@ function FloatingActions() {
   );
 }
 
-function RestaurantHeader() {
+function RestaurantHeader({ onChatClick }) {
   return (
     <div style={{ background: '#fff', padding: '20px 18px 18px', position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
@@ -343,8 +343,15 @@ function RestaurantHeader() {
             <span style={{ color: '#111' }}>10:00 PM (Sat)</span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
-          <IconInfo />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 4 }}>
+          {/* chat bubble — sits to the LEFT of the photo placeholder per design */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            transform: 'translateX(-40%)',
+          }}>
+            <window.ChatIconButton onClick={onChatClick} size={60} />
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#111', letterSpacing: 0.2 }}>AI Assistant</span>
+          </div>
           <div style={{
             width: 56, height: 56, border: '1px solid #d6d6d6', borderRadius: 4,
             display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff',
@@ -653,9 +660,9 @@ function PromoBannerFeedVibe() {
   );
 }
 
-function SelectOrderCTA({ onChatClick }) {
-  // BottomBar: chat icon button on the left + "Select Order Method" CTA filling the rest.
-  // ChatIconButton is defined in chat.jsx (loaded before app.jsx in index.html).
+function SelectOrderCTA() {
+  // Bottom CTA is back to a single full-width button — chat bubble moved
+  // up into FloatingActions (top-right corner of the hero banner).
   return (
     <div style={{
       position: 'sticky', bottom: 0, left: 0, right: 0,
@@ -663,17 +670,14 @@ function SelectOrderCTA({ onChatClick }) {
       background: 'linear-gradient(to top, rgba(255,255,255,0.97) 55%, rgba(255,255,255,0))',
       zIndex: 8,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <window.ChatIconButton onClick={onChatClick} />
-        <button style={{
-          flex: 1, height: 52, borderRadius: 999, border: 'none',
-          background: 'linear-gradient(180deg, #ff8a3d 0%, #f47216 100%)',
-          color: '#fff', fontSize: 17, fontWeight: 700, letterSpacing: 0.1,
-          boxShadow: '0 6px 16px rgba(244,114,22,0.35)', cursor: 'pointer',
-        }}>
-          Select Order Method
-        </button>
-      </div>
+      <button style={{
+        width: '100%', height: 52, borderRadius: 999, border: 'none',
+        background: 'linear-gradient(180deg, #ff8a3d 0%, #f47216 100%)',
+        color: '#fff', fontSize: 17, fontWeight: 700, letterSpacing: 0.1,
+        boxShadow: '0 6px 16px rgba(244,114,22,0.35)', cursor: 'pointer',
+      }}>
+        Select Order Method
+      </button>
     </div>
   );
 }
@@ -692,7 +696,7 @@ function OrderPage({ onChatClick }) {
       </div>
 
       <div style={{ marginTop: -16, position: 'relative' }}>
-        <RestaurantHeader />
+        <RestaurantHeader onChatClick={onChatClick} />
       </div>
 
       <div style={{ height: 10, background: '#efefef' }} />
@@ -706,7 +710,7 @@ function OrderPage({ onChatClick }) {
       ))}
 
       <div style={{ height: 24, background: '#fff' }} />
-      <SelectOrderCTA onChatClick={onChatClick} />
+      <SelectOrderCTA />
     </div>
   );
 }

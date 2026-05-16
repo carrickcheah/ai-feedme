@@ -1,0 +1,152 @@
+# Edge cases — 10 scenarios for the trickier paths.
+
+# ─────────────────────────────────────────────────────────────
+# E-1: VIP recognition (Sarah)
+# ─────────────────────────────────────────────────────────────
+- description: "E-1: VIP customer recognized + greeted by name"
+  vars:
+    message: "Hi"
+    customer_id: "cust_sarah_001"
+    channel: "mobile"
+  assert:
+    - type: contains
+      transform: "output?.output ?? ''"
+      value: "Sarah"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Greets the customer by name. May reference VIP status, usual order (Mango Iceyoo), or returning-customer language ('welcome back' etc)."
+
+# ─────────────────────────────────────────────────────────────
+# E-2: VIP allergy awareness — should NOT recommend dairy items
+# ─────────────────────────────────────────────────────────────
+- description: "E-2: VIP dairy allergy respected"
+  vars:
+    message: "Recommend a bingsu for me"
+    customer_id: "cust_sarah_001"
+    channel: "mobile"
+  assert:
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: |
+        The response either: (a) recommends a dairy-free option, (b) explicitly mentions her dairy allergy, or
+        (c) asks about dairy restrictions before suggesting cheesecake/milk-based bingsu.
+        It should NOT recommend a cheesecake bingsu without acknowledging the allergy.
+
+# ─────────────────────────────────────────────────────────────
+# E-3: vague order — should ask for clarification
+# ─────────────────────────────────────────────────────────────
+- description: "E-3: ambiguous request — clarifies before ordering"
+  vars:
+    message: "I want a bingsu"
+    channel: "kiosk"
+  assert:
+    - type: javascript
+      value: "!(output.tools_called || []).includes('pos__create_order')"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Asks for clarification on which bingsu flavor or lists options. Does NOT pick one randomly."
+
+# ─────────────────────────────────────────────────────────────
+# E-4: item not on menu — graceful redirect
+# ─────────────────────────────────────────────────────────────
+- description: "E-4: item not on menu — no hallucination"
+  vars:
+    message: "Do you have pizza?"
+    channel: "web"
+  assert:
+    - type: javascript
+      value: "!(output.tools_called || []).includes('pos__create_order')"
+    - type: contains-any
+      transform: "output?.output ?? ''"
+      value: ["sorry", "don't have", "not on", "not available", "Sorry"]
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Politely says pizza is not available. Does NOT invent a pizza menu item. May suggest something from the IceYoo menu."
+
+# ─────────────────────────────────────────────────────────────
+# E-5: out-of-stock item — agent searches but reports unavailable
+# ─────────────────────────────────────────────────────────────
+- description: "E-5: customer asks for an unrelated item politely refused"
+  vars:
+    message: "Can I order a burger?"
+    channel: "mobile"
+  assert:
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Acknowledges that burger is not on the IceYoo menu. Does NOT call create_order. May suggest Korean chicken or another savoury item from YOOYOO EAT as an alternative."
+
+# ─────────────────────────────────────────────────────────────
+# E-6: large quantity — agent handles without errors
+# ─────────────────────────────────────────────────────────────
+- description: "E-6: large quantity order"
+  vars:
+    message: "I want 12 Mango Iceyoo for a party"
+    channel: "web"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: javascript
+      value: "(output.tools_called || []).includes('pos__search_menu')"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Confirms a 12-quantity order, quotes the total. Total should be around RM154.80 (12 × RM12.90). Asks for confirmation before placing."
+
+# ─────────────────────────────────────────────────────────────
+# E-7: Bahasa Malaysia order
+# ─────────────────────────────────────────────────────────────
+- description: "E-7: full Bahasa Malaysia message"
+  vars:
+    message: "Boleh saya pesan satu Korean Chicken Wing (6 pcs)?"
+    channel: "mobile"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: javascript
+      value: "(output.tools_called || []).includes('pos__search_menu')"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Understood the Bahasa Malaysia order. The reply should be in Bahasa Malaysia OR Manglish OR mixed — not pure English. Confirms or asks for confirmation."
+
+# ─────────────────────────────────────────────────────────────
+# E-8: allergy mentioned in message — agent should react
+# ─────────────────────────────────────────────────────────────
+- description: "E-8: dairy allergy disclosed in message"
+  vars:
+    message: "I'm lactose intolerant. Can I have an Oreo Cheesecake Bingsu?"
+    channel: "kiosk"
+  assert:
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: |
+        The response should: (a) acknowledge the lactose intolerance, AND
+        (b) warn that Oreo Cheesecake Bingsu contains dairy (or recommend against it),
+        AND ideally suggest a non-dairy alternative.
+        It should NOT silently proceed to confirm the order.
+
+# ─────────────────────────────────────────────────────────────
+# E-9: customer asks about closing time
+# ─────────────────────────────────────────────────────────────
+- description: "E-9: hours question — no tool calls needed"
+  vars:
+    message: "What time do you close today?"
+    channel: "mobile"
+  assert:
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Answers with closing time (system prompt may mention '10:00 PM Sat' or similar). Does NOT call create_order."
+
+# ─────────────────────────────────────────────────────────────
+# E-10: empty / nonsense message
+# ─────────────────────────────────────────────────────────────
+- description: "E-10: nonsense input handled gracefully"
+  vars:
+    message: "asdfghjkl"
+    channel: "web"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: javascript
+      value: "!(output.tools_called || []).includes('pos__create_order')"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Asks the customer to clarify their request. Does NOT pretend to understand or invent an order."

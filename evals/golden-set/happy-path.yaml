@@ -1,0 +1,152 @@
+# Happy-path tests — 10 scenarios covering the most common order flows.
+# Each test checks both the agent text + the tools_called array.
+
+# ─────────────────────────────────────────────────────────────
+# H-1: simple single-item order — agent should search menu first
+# ─────────────────────────────────────────────────────────────
+- description: "H-1: simple single-item order — searches menu"
+  vars:
+    message: "I want one Mango Iceyoo"
+    channel: "mobile"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: javascript
+      value: "(output.tools_called || []).includes('pos__search_menu')"
+    - type: contains-any
+      transform: "output?.output ?? ''"
+      value: ["RM12", "12.90", "Mango"]
+
+# ─────────────────────────────────────────────────────────────
+# H-2: agent confirms before placing order
+# ─────────────────────────────────────────────────────────────
+- description: "H-2: confirms before placing order"
+  vars:
+    message: "I want one Coconut Bingsu"
+    channel: "mobile"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: javascript
+      value: "!(output.tools_called || []).includes('pos__create_order')"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "The response acknowledges the order and asks for confirmation BEFORE placing it. Does NOT say the order is placed."
+
+# ─────────────────────────────────────────────────────────────
+# H-3: menu inquiry without ordering — search but no create
+# ─────────────────────────────────────────────────────────────
+- description: "H-3: menu inquiry — search but no create_order"
+  vars:
+    message: "What bingsu flavors do you have?"
+    channel: "mobile"
+  assert:
+    - type: javascript
+      value: "(output.tools_called || []).includes('pos__search_menu')"
+    - type: javascript
+      value: "!(output.tools_called || []).includes('pos__create_order')"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Lists at least 3 bingsu options with names and prices."
+
+# ─────────────────────────────────────────────────────────────
+# H-4: hours / location — answered without tool calls
+# ─────────────────────────────────────────────────────────────
+- description: "H-4: simple greeting — no tool calls"
+  vars:
+    message: "Hi"
+    channel: "kiosk"
+  assert:
+    - type: javascript
+      value: "(output.tools_called || []).length === 0"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Friendly greeting. Invites the customer to order or browse the menu. Mentions IceYoo Desaru or the menu in some form."
+
+# ─────────────────────────────────────────────────────────────
+# H-5: multiple items in one message
+# ─────────────────────────────────────────────────────────────
+- description: "H-5: multi-item — searches each"
+  vars:
+    message: "I want one Mango Iceyoo and one Coffee Ice Blended"
+    channel: "mobile"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: javascript
+      value: "(output.tools_called || []).filter(t => t === 'pos__search_menu').length >= 1"
+    - type: contains-any
+      transform: "output?.output ?? ''"
+      value: ["Mango", "Coffee", "RM"]
+
+# ─────────────────────────────────────────────────────────────
+# H-6: ESL / Manglish — agent should still understand
+# ─────────────────────────────────────────────────────────────
+- description: "H-6: Manglish order"
+  vars:
+    message: "Boss, satu Mango Bingsu can?"
+    channel: "kiosk"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: javascript
+      value: "(output.tools_called || []).includes('pos__search_menu')"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Understood the order despite Manglish phrasing. Confirms or asks for confirmation. Tone is friendly, not confused."
+
+# ─────────────────────────────────────────────────────────────
+# H-7: agent quotes correct price (from POS, not invented)
+# ─────────────────────────────────────────────────────────────
+- description: "H-7: quotes correct price from POS"
+  vars:
+    message: "How much is the Musang King Durian Bingsu?"
+    channel: "mobile"
+  assert:
+    - type: javascript
+      value: "(output.tools_called || []).includes('pos__search_menu')"
+    - type: contains-any
+      transform: "output?.output ?? ''"
+      value: ["32.90", "RM32"]
+
+# ─────────────────────────────────────────────────────────────
+# H-8: cost ceiling per turn
+# ─────────────────────────────────────────────────────────────
+- description: "H-8: cost guardrail — single order under $0.05"
+  vars:
+    message: "Just a Coke please"
+    channel: "mobile"
+  assert:
+    - type: javascript
+      value: "output.cost_usd < 0.05"
+    - type: javascript
+      value: "output.duration_ms < 15000"
+
+# ─────────────────────────────────────────────────────────────
+# H-9: structured response includes session_id
+# ─────────────────────────────────────────────────────────────
+- description: "H-9: response contract — session_id always returned"
+  vars:
+    message: "What's on the menu?"
+    channel: "web"
+  assert:
+    - type: javascript
+      value: "typeof output.session_id === 'string' && output.session_id.startsWith('sess_')"
+    - type: javascript
+      value: "typeof output.cost_usd === 'number' && output.cost_usd >= 0"
+    - type: javascript
+      value: "typeof output.duration_ms === 'number'"
+
+# ─────────────────────────────────────────────────────────────
+# H-10: empty modifier doesn't break the agent
+# ─────────────────────────────────────────────────────────────
+- description: "H-10: vague follow-up question handled"
+  vars:
+    message: "Recommend something cooling please"
+    channel: "mobile"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Suggests at least one cooling menu item (Iceyoo, Bingsu, or Ice Blended) with a brief reason. Stays on the IceYoo menu."

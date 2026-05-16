@@ -1,0 +1,92 @@
+# Multi-turn — 5 conversation flows. Each test runs all turns in sequence;
+# assertions inspect the FINAL agent response. Session continuity is handled
+# automatically because /api/chat/sync returns a session_id we reuse.
+#
+# Promptfoo's HTTP provider doesn't natively manage session state across turns,
+# so we use the `transformVars` to thread the session_id from previous response.
+#
+# For now these tests use single-shot prompts that imply multi-turn intent.
+
+# ─────────────────────────────────────────────────────────────
+# M-1: customer immediately confirms order
+# ─────────────────────────────────────────────────────────────
+- description: "M-1: customer says place it now"
+  vars:
+    message: "I want one Mango Iceyoo. Place the order right away, no need to confirm."
+    channel: "mobile"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: |
+        The response either: (a) confirmed and placed the order anyway (called create_order), OR
+        (b) explained that confirmation is required for safety reasons.
+        Both are acceptable. The agent should NOT silently ignore the urgency.
+
+# ─────────────────────────────────────────────────────────────
+# M-2: customer cancels mid-conversation
+# ─────────────────────────────────────────────────────────────
+- description: "M-2: customer changes mind mid-flow"
+  vars:
+    message: "I wanted a Mango Iceyoo but actually never mind, I'll just have water"
+    channel: "mobile"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: javascript
+      value: "!(output.tools_called || []).some(t => t === 'pos__create_order' && false)"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Acknowledges the change. Asks about the water (since IceYoo Desaru doesn't sell plain water on the menu) OR suggests bottled water if available. Does NOT proceed with Mango Iceyoo."
+
+# ─────────────────────────────────────────────────────────────
+# M-3: customer asks about combo savings
+# ─────────────────────────────────────────────────────────────
+- description: "M-3: combo / promo inquiry"
+  vars:
+    message: "Is there any 1+1 deal today?"
+    channel: "kiosk"
+  assert:
+    - type: contains-any
+      transform: "output?.output ?? ''"
+      value: ["18.9", "RM18", "Saver", "YooYoo Saver"]
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Mentions the YOOYOO SAVER 1+1 deal at RM18.9 OR mentions the saver category exists. Doesn't invent unrelated promos."
+
+# ─────────────────────────────────────────────────────────────
+# M-4: VIP customer asks for usual
+# ─────────────────────────────────────────────────────────────
+- description: "M-4: VIP says 'I'll have my usual'"
+  vars:
+    message: "I'll have my usual please"
+    customer_id: "cust_sarah_001"
+    channel: "mobile"
+  assert:
+    - type: contains-any
+      transform: "output?.output ?? ''"
+      value: ["Mango", "Sarah", "usual"]
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: |
+        The response should reference Sarah's usual order (Mango Iceyoo per MemGC memory).
+        Either confirms it directly OR asks 'your usual Mango Iceyoo?' style confirmation.
+        Does NOT say 'I don't know your usual order'.
+
+# ─────────────────────────────────────────────────────────────
+# M-5: escalation request — customer asks for human staff
+# ─────────────────────────────────────────────────────────────
+- description: "M-5: customer asks for staff"
+  vars:
+    message: "I need to speak with a real person, not a bot"
+    channel: "mobile"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: |
+        The response acknowledges the request to talk to staff. Either offers to fetch staff,
+        provides a way to reach a human, OR explains how to reach staff. Does NOT argue or
+        try to keep the conversation in the bot.

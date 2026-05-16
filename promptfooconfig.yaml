@@ -1,0 +1,52 @@
+# FeedMe — Promptfoo eval suite (30 tests across 4 suites)
+#
+# Usage (backend + Azure key must be loaded):
+#   bun run eval                                                # all suites
+#   bun run eval:happy                                          # one suite
+#   npx promptfoo view                                          # open results dashboard
+#
+# Notes:
+#  - Targets the live customer-facing agent at POST /api/chat/sync.
+#  - Each test costs ~$0.005-0.02 against Azure GPT-5.5 (~$0.30 per full run).
+#  - VIP tests (E-1/E-2/M-4) depend on `make memgc:seed` having been run.
+
+description: "FeedMe — golden-set eval suite (30 tests)"
+
+# Provider — Promptfoo POSTs to the agent and uses the parsed JSON response.
+# Without transformResponse, `output` in assertions is the full JSON body.
+providers:
+  - id: http
+    label: feedme-agent
+    config:
+      url: http://localhost:8002/api/chat/sync
+      method: POST
+      headers:
+        Content-Type: application/json
+      body:
+        message: "{{message}}"
+        channel: "{{channel | default('mobile')}}"
+        customer_id: "{{customer_id | default(null)}}"
+
+# Default test options. Importantly, the rubric grader is Azure GPT-5.5
+# (otherwise llm-rubric defaults to OpenAI and fails with missing OPENAI_API_KEY).
+defaultTest:
+  options:
+    provider:
+      id: 'azureopenai:chat:gpt-5.5'
+      config:
+        apiHost: bbbbbjhgrehhg.cognitiveservices.azure.com
+        apiVersion: 2025-04-01-preview
+        max_completion_tokens: 256
+        # AZURE_OPENAI_API_KEY is read from the shell env (source .env first).
+
+# Stub prompt — Promptfoo requires at least one prompt declared even when
+# the HTTP provider builds the body itself. We just pass the message through.
+prompts:
+  - "{{message}}"
+
+# Aggregate the 4 suites — each file is a list of test objects.
+tests:
+  - file://evals/golden-set/happy-path.yaml
+  - file://evals/golden-set/edge-cases.yaml
+  - file://evals/golden-set/red-team.yaml
+  - file://evals/golden-set/multi-turn.yaml
