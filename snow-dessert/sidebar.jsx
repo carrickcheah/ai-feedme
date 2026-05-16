@@ -74,4 +74,55 @@ function Sidebar() {
   );
 }
 
-Object.assign(window, { Sidebar, useHashRoute, findNavItem, NAV, DEFAULT_ROUTE });
+// ── Mobile-only nav drawer ─────────────────────────────────────
+// Slides in from left when the kiosk hamburger is tapped. Same NAV
+// items as the desktop Sidebar. Tapping a link navigates via hash;
+// App.jsx auto-closes on route change.
+function MobileNav({ open, onClose }) {
+  const route = useHashRoute();
+  return (
+    <React.Fragment>
+      <div
+        onClick={onClose}
+        className="fm-mnav-backdrop"
+        style={{
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? "auto" : "none",
+        }}
+      />
+      <aside
+        className="fm-mnav"
+        style={{ transform: open ? "translateX(0)" : "translateX(-100%)" }}
+        aria-hidden={!open}
+      >
+        <div className="fm-brand">
+          <div className="fm-brand-mark">F</div>
+          <div>
+            <div className="fm-brand-name">FeedMe</div>
+            <div className="fm-brand-sub">Agentic AI · Prototype</div>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close menu"
+            className="fm-mnav-close"
+          >×</button>
+        </div>
+        <nav className="fm-nav">
+          {NAV.map((n, i) => {
+            if (n.type === "header") return <div key={i} className="fm-section-header">{n.label}</div>;
+            if (n.type === "subheader") return <div key={i} className="fm-section-sub">{n.label}</div>;
+            const cls = "fm-item" + (route === n.id ? " active" : "");
+            return <a key={i} href={"#" + n.id} className={cls} onClick={onClose}>{n.label}</a>;
+          })}
+        </nav>
+        <div className="fm-foot">
+          <a href="https://github.com/carrickcheah/ai-feedme" target="_blank" rel="noreferrer">
+            github.com/carrickcheah/ai-feedme
+          </a>
+        </div>
+      </aside>
+    </React.Fragment>
+  );
+}
+
+Object.assign(window, { Sidebar, MobileNav, useHashRoute, findNavItem, NAV, DEFAULT_ROUTE });

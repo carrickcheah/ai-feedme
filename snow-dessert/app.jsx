@@ -7,6 +7,11 @@ const IconBack = ({ size = 22 }) => (
     <path d="M15 5L8 12l7 7" stroke="#111" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+const IconHamburger = ({ size = 22 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path d="M4 7h16M4 12h16M4 17h16" stroke="#111" strokeWidth="2.2" strokeLinecap="round"/>
+  </svg>
+);
 const IconGlobe = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="12" r="9" stroke="#111" strokeWidth="1.8"/>
@@ -279,19 +284,25 @@ const PromoBanner = () => (
 );
 
 // ── chrome ────────────────────────────────────────────────────
-function HeroTopBar() {
+function HeroTopBar({ onMenuClick }) {
+  // When onMenuClick is provided (mobile only), swap the kiosk's back arrow
+  // for a hamburger menu that opens the mobile nav drawer.
   return (
     <div style={{
       position: 'absolute', top: 56, left: 0, right: 0,
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       padding: '0 14px', zIndex: 5,
     }}>
-      <button style={{
-        width: 38, height: 38, borderRadius: '50%', background: '#fff',
-        border: 'none', boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-      }}>
-        <IconBack />
+      <button
+        onClick={onMenuClick}
+        aria-label={onMenuClick ? "Open menu" : "Back"}
+        style={{
+          width: 38, height: 38, borderRadius: '50%', background: '#fff',
+          border: 'none', boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+        }}
+      >
+        {onMenuClick ? <IconHamburger /> : <IconBack />}
       </button>
       <button style={{
         height: 34, padding: '0 12px', borderRadius: 999, background: '#fff',
@@ -683,7 +694,7 @@ function SelectOrderCTA() {
 }
 
 // ── page ──────────────────────────────────────────────────────
-function OrderPage({ onChatClick }) {
+function OrderPage({ onChatClick, onMenuClick }) {
   return (
     <div style={{ position: 'relative', minHeight: '100%', background: '#efefef' }}>
       <div style={{
@@ -691,7 +702,7 @@ function OrderPage({ onChatClick }) {
         background: 'linear-gradient(180deg, #f97316 0%, #fb9d4b 55%, #fdc792 100%)',
         position: 'relative',
       }}>
-        <HeroTopBar />
+        <HeroTopBar onMenuClick={onMenuClick} />
         <FloatingActions />
       </div>
 
@@ -752,14 +763,19 @@ function renderPage(route, onChatClick, chatPanel) {
 
 function App() {
   const [chatOpen, setChatOpen] = React.useState(false);
+  const [navOpen, setNavOpen] = React.useState(false);
   const route = window.useHashRoute();
   const isMobile = useIsMobile();
 
-  // Defensive: chat should never be open by default after a layout switch.
-  // Without this, an open chat on desktop survives a resize to mobile width.
+  // Defensive: chat and nav drawer should never be open by default after a
+  // layout switch. Without this, an open chat on desktop survives a resize
+  // to mobile width.
   React.useEffect(() => {
-    if (isMobile) setChatOpen(false);
+    if (isMobile) { setChatOpen(false); setNavOpen(false); }
   }, [isMobile]);
+
+  // Close the nav drawer whenever the route changes (user picked an item).
+  React.useEffect(() => { setNavOpen(false); }, [route]);
 
   const chatPanel = <window.ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />;
 
@@ -770,9 +786,13 @@ function App() {
     return (
       <div className="fm-mobile">
         <div className="fm-mobile-scroll">
-          <OrderPage onChatClick={() => setChatOpen(true)} />
+          <OrderPage
+            onChatClick={() => setChatOpen(true)}
+            onMenuClick={() => setNavOpen(true)}
+          />
         </div>
         {chatPanel}
+        <window.MobileNav open={navOpen} onClose={() => setNavOpen(false)} />
       </div>
     );
   }
