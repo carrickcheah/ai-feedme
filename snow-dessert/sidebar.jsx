@@ -13,7 +13,7 @@ const NAV = [
   { type: "item", id: "app/inventory-agent",     label: "Inventory Agent" },
 
   { type: "header", label: "Docs" },
-  { type: "subheader", label: "Architecture" },
+  { type: "header", label: "Architecture" },
   { type: "item", id: "docs/guide",         label: "Guide",          file: "docs/DEMO_SCRIPT.md" },
   { type: "item", id: "docs/whole-archi",   label: "Whole Archi",    file: "docs/PLAN.md" },
   { type: "item", id: "docs/agents-archi",  label: "Agents Archi",   file: "docs/AGENT_FLOW_KITCHEN_INVENTORY.md" },
