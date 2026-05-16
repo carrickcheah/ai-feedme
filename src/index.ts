@@ -63,6 +63,28 @@ app.get("/", (c) =>
 // ── mount /api/* routes ─────────────────────────────────────
 app.route("/api", chatApp);
 
+// ── event system (Kafka consumers + producer) ─────────────────
+// Starts in background — boot continues whether Kafka is up or not.
+// Falls back to in-process agent triggering when Kafka unreachable.
+import { startEventSystem, shutdownEventSystem } from "./events";
+startEventSystem()
+  .then((status) =>
+    log.info(
+      { kafka_reachable: status.kafka_reachable, consumers: status.consumers_started, brokers: status.brokers },
+      status.kafka_reachable ? "[BOOT] Kafka active" : "[BOOT] in-process fallback (Kafka unreachable)",
+    ),
+  )
+  .catch((err) => log.error({ err: String(err) }, "[BOOT] event system failed to start"));
+
+const shutdown = (sig: string) => {
+  log.info({ sig }, "[BOOT] shutting down");
+  shutdownEventSystem()
+    .catch(() => undefined)
+    .then(() => process.exit(0));
+};
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
 // ── boot ────────────────────────────────────────────────────
 log.info({ port: env.PORT, env: env.NODE_ENV, restaurant: env.RESTAURANT_NAME }, "FeedMe app starting");
 

@@ -10,7 +10,8 @@
  */
 import { ulid } from "ulid";
 import { runAgent } from "./agent-base";
-import { handleOrderCreated, type OrderCreatedEvent } from "./kitchen";
+import { type OrderCreatedEvent } from "./kitchen";
+import { publishOrderCreated } from "../events";
 import type { ChatMessage } from "../brain";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
@@ -135,24 +136,22 @@ export async function processChatMessage(req: ChatRequest): Promise<ChatResponse
     sessions.set(session_id, newHistory);
   }
 
-  // ── Multi-agent trigger: if an order was created, wake the Kitchen Agent ──
-  // Phase 2 Stage B: in-process call. Phase 2 Stage C: Kafka publish.
+  // ── Multi-agent trigger: if an order was created, publish order.created ──
+  // Kafka if available, in-process fallback if not — agent always wakes either way.
   if (result.success && extractCreatedOrder(result.tools_called)) {
     fetchLatestOrderForSession(session_id)
-      .then((event) => {
+      .then(async (event) => {
         if (!event) {
-          logger.warn({ session_id }, "[AGENT:customer-facing] order created but couldn't fetch details for Kitchen");
+          logger.warn({ session_id }, "[AGENT:customer-facing] order created but couldn't fetch details to publish");
           return;
         }
-        logger.info({ session_id, order_id: event.order_id }, "[AGENT:customer-facing] triggering Kitchen (in-process)");
-        // Fire-and-forget — don't block customer's reply on kitchen scheduling
-        handleOrderCreated(event).catch((err) => {
-          logger.error({ err: String(err), order_id: event.order_id }, "[AGENT:customer-facing] Kitchen Agent error");
-        });
+        const r = await publishOrderCreated(event);
+        logger.info(
+          { session_id, order_id: event.order_id, via_kafka: r.via_kafka, event_id: r.event_id },
+          "[AGENT:customer-facing] order.created event dispatched",
+        );
       })
-      .catch((err) => {
-        logger.error({ err: String(err) }, "[AGENT:customer-facing] fetchLatestOrderForSession failed");
-      });
+      .catch((err) => logger.error({ err: String(err) }, "[AGENT:customer-facing] order.created publish failed"));
   }
 
   return result;
