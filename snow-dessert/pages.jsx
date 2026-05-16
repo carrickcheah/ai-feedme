@@ -18,6 +18,19 @@ function renderMarkdownSafely(md) {
   return { __html: clean };
 }
 
+// ─── SVG page (architecture diagrams etc) ──────────────────────
+function SvgPage({ src, title }) {
+  const url = RAW_BASE + src;
+  return (
+    <div className="fm-doc fm-svg-page">
+      {title && <h1 className="fm-doc-title">{title}</h1>}
+      <div className="fm-svg-wrap">
+        <img src={url} alt={title || "diagram"} className="fm-svg-img" />
+      </div>
+    </div>
+  );
+}
+
 // ─── Markdown page ──────────────────────────────────────────────
 function MarkdownPage({ file, title }) {
   const [md, setMd] = usePageState("");
@@ -307,6 +320,7 @@ function ComingSoonPage({ what }) {
 
 Object.assign(window, {
   MarkdownPage,
+  SvgPage,
   KitchenAgentPage,
   InventoryAgentPage,
   ComingSoonPage,

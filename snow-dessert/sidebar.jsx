@@ -14,7 +14,7 @@ const NAV = [
 
   { type: "header", label: "Docs" },
   { type: "item", id: "docs/guide",         label: "Guide",          file: "docs/DEMO_SCRIPT.md" },
-  { type: "item", id: "docs/whole-archi",   label: "Whole Archi",    file: "docs/PLAN.md" },
+  { type: "item", id: "docs/architecture",  label: "Architecture",   file: "docs/chart_feedme_agent_architecture_v8.svg" },
   { type: "item", id: "docs/agents-archi",  label: "Agents Archi",   file: "docs/AGENT_FLOW_KITCHEN_INVENTORY.md" },
   { type: "item", id: "docs/memory-layers", label: "Memory Layers",  file: "docs/REUSE_MEMGC.md" },
   { type: "item", id: "docs/database",      label: "Database",       file: "docs/SCHEMAS.md" },
