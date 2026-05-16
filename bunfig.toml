@@ -1,0 +1,10 @@
+# FeedMe — Bun runtime config
+# Docs: https://bun.sh/docs/runtime/bunfig
+
+[install]
+exact = true
+auto = "auto"
+
+[test]
+coverage = true
+coverageThreshold = { line = 70, function = 70 }

@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+bun.lock.local
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Data (per-restaurant SQLite, MemGC dbs)
+data/tenants/
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Python (memgc-service)
+__pycache__/
+*.py[cod]
+*.pyc
+.venv/
+.uv-cache/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test
+coverage/
+.nyc_output/
+
+# Temporary
+*.tmp
+*.bak

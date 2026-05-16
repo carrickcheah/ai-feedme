@@ -1,0 +1,119 @@
+# FeedMe — Prototype docker-compose
+#
+# Prototype scope:
+#   - SQLite only (no Postgres)
+#   - 3 services in Docker: Redis (cache), Kafka (event bus, KRaft mode), memgc-service
+#   - Bun app + MCP servers run locally via `bun run` (faster dev loop)
+#
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f
+#   docker compose down            # stop
+#   docker compose down -v         # stop + wipe volumes
+
+services:
+  # ============================================================
+  # Redis — hot-path cache for MemGC answer() results
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: feedme-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - feedme-network
+
+  # ============================================================
+  # Kafka — event bus (KRaft mode, single-node, no Zookeeper)
+  # ============================================================
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: feedme-kafka
+    ports:
+      - "9092:9092"
+      - "9094:9094"   # external listener for host access
+    environment:
+      # KRaft (no Zookeeper)
+      KAFKA_CFG_NODE_ID: "0"
+      KAFKA_CFG_PROCESS_ROLES: "controller,broker"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "0@kafka:9093"
+      # Listeners
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      # Auto-create topics (prototype convenience)
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # Single-node defaults
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    volumes:
+      - kafka_data:/bitnami/kafka
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - feedme-network
+
+  # ============================================================
+  # memgc-service — Python FastAPI sidecar wrapping MemGC
+  # ============================================================
+  # Bind-mounts the host's ../memgc/memgc-py for editable dev install.
+  # In production, bake the source into the image (Phase 5).
+  memgc-service:
+    build:
+      context: ./memgc-service
+      dockerfile: Dockerfile
+    container_name: feedme-memgc
+    ports:
+      - "8003:8003"
+    environment:
+      MEMGC_DATA_DIR: "/data/tenants"
+      PYTHONPATH: "/memgc-py/src"
+      # LLM credentials passed through from .env
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_BASE_URL: ${AZURE_OPENAI_BASE_URL:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ../memgc/memgc-py/src:/memgc-py/src:ro    # MemGC source (editable)
+      - ./data/tenants:/data/tenants               # SQLite files per restaurant
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health').read()"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      - feedme-network
+
+# ============================================================
+# Volumes
+# ============================================================
+volumes:
+  redis_data:
+  kafka_data:
+
+# ============================================================
+# Networks
+# ============================================================
+networks:
+  feedme-network:
+    driver: bridge

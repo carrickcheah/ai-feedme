@@ -1,0 +1,43 @@
+{
+  "name": "ai-feedme",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "description": "FeedMe — autonomous restaurant agent system",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "mcp:pos": "bun mcp-servers/pos/index.ts",
+    "mcp:kitchen-display": "bun mcp-servers/kitchen-display/index.ts",
+    "mcp:payment": "bun mcp-servers/payment/index.ts",
+    "mcp:supplier": "bun mcp-servers/supplier/index.ts",
+    "mcp:all": "concurrently -n pos,kds,pay,sup -c blue,green,yellow,magenta \"bun mcp-servers/pos/index.ts\" \"bun mcp-servers/kitchen-display/index.ts\" \"bun mcp-servers/payment/index.ts\" \"bun mcp-servers/supplier/index.ts\"",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f",
+    "infra:reset": "docker compose down -v && docker compose up -d",
+    "eval": "promptfoo eval"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "hono": "^4.6.0",
+    "ioredis": "^5.4.1",
+    "kafkajs": "^2.2.4",
+    "openai": "^4.73.0",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.2.2",
+    "ulid": "^2.3.0",
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "concurrently": "^9.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "bun": ">=1.3.13"
+  }
+}

@@ -1,0 +1,24 @@
+[project]
+name = "memgc-service"
+version = "0.0.1"
+description = "FeedMe FastAPI sidecar that wraps memgc-py for the TS supervisor"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+]
+
+# Phase 0: memgc-py is bind-mounted at runtime (see docker-compose.yml).
+# Phase 3+: switch to editable install:
+#   uv add --editable ../../memgc/memgc-py
+#
+# [tool.uv.sources]
+# memgc = { path = "../../memgc/memgc-py", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
