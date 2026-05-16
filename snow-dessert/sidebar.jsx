@@ -17,7 +17,7 @@ const NAV = [
   { type: "item", id: "docs/architecture",  label: "Architecture",   file: "docs/chart_feedme_agent_architecture_v8.svg" },
   { type: "item", id: "docs/agents-archi",  label: "Agents",         file: "docs/AGENT_FLOW_KITCHEN_INVENTORY.md" },
   { type: "item", id: "docs/memory-layers", label: "Memory Layers",  file: "docs/REUSE_MEMGC.md" },
-  { type: "item", id: "docs/database",      label: "Database",       file: "docs/SCHEMAS.md" },
+  { type: "item", id: "docs/database",      label: "MCP, Tools, Skills, DB", file: "docs/SCHEMAS.md" },
   { type: "item", id: "docs/mcp",           label: "MCP",            file: "docs/PHASES.md" },
   { type: "item", id: "docs/skills",        label: "Skills",         file: "docs/SKILL_TEMPLATES.md" },
   { type: "item", id: "docs/evals",         label: "Evals/Red Team", file: "docs/EVAL_SCENARIOS.md" },
