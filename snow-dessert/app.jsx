@@ -715,13 +715,71 @@ function OrderPage({ onChatClick }) {
   );
 }
 
+// ── Layout shell ────────────────────────────────────────────────
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = React.useState(
+    typeof window !== "undefined" ? window.innerWidth < breakpoint : false,
+  );
+  React.useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, [breakpoint]);
+  return isMobile;
+}
+
+function renderPage(route, onChatClick, chatPanel) {
+  if (!route || route === "app/customer-facing-agent") {
+    return {
+      kind: "phone",
+      content: (
+        <React.Fragment>
+          <OrderPage onChatClick={onChatClick} />
+          {chatPanel}
+        </React.Fragment>
+      ),
+    };
+  }
+  if (route === "app/kitchen-agent")   return { kind: "dashboard", content: <window.KitchenAgentPage /> };
+  if (route === "app/inventory-agent") return { kind: "dashboard", content: <window.InventoryAgentPage /> };
+  if (route === "summary")             return { kind: "dashboard", content: <window.MarkdownPage file="README.md" title="Summary" /> };
+  if (route === "docs/cicd")           return { kind: "dashboard", content: <window.ComingSoonPage what="CI/CD" /> };
+
+  const item = window.findNavItem(route);
+  if (item && item.file) return { kind: "dashboard", content: <window.MarkdownPage file={item.file} title={item.label} /> };
+  return { kind: "dashboard", content: <window.ComingSoonPage what={item ? item.label : "Page not found"} /> };
+}
+
 function App() {
   const [chatOpen, setChatOpen] = React.useState(false);
+  const route = window.useHashRoute();
+  const isMobile = useIsMobile();
+
+  const chatPanel = <window.ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />;
+
+  // Mobile: always kiosk fullscreen, sidebar + iPhone frame both hidden.
+  if (isMobile) {
+    return (
+      <div className="fm-mobile">
+        <OrderPage onChatClick={() => setChatOpen(true)} />
+        {chatPanel}
+      </div>
+    );
+  }
+
+  // Desktop: sidebar + content area.
+  const page = renderPage(route, () => setChatOpen(true), chatPanel);
   return (
-    <IOSDevice width={402} height={874}>
-      <OrderPage onChatClick={() => setChatOpen(true)} />
-      <window.ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
-    </IOSDevice>
+    <div className="fm-desktop">
+      <window.Sidebar />
+      <main className={"fm-main fm-main-" + page.kind}>
+        {page.kind === "phone" ? (
+          <IOSDevice width={402} height={874}>{page.content}</IOSDevice>
+        ) : (
+          page.content
+        )}
+      </main>
+    </div>
   );
 }
 
