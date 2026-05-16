@@ -56,7 +56,12 @@ const EnvSchema = z.object({
   CORS_ALLOWED_ORIGINS: z.string().default("*"),
 
   // ── Observability ──
-  LANGFUSE_ENABLED: z.coerce.boolean().default(false),
+  // Note: z.coerce.boolean() turns "false" into true (string is truthy).
+  // Use a string→boolean transform instead so .env="false" works as expected.
+  LANGFUSE_ENABLED: z
+    .string()
+    .default("false")
+    .transform((v) => v.toLowerCase() === "true" || v === "1"),
   LANGFUSE_PUBLIC_KEY: z.string().optional(),
   LANGFUSE_SECRET_KEY: z.string().optional(),
   LANGFUSE_BASE_URL: z.string().default("https://cloud.langfuse.com"),

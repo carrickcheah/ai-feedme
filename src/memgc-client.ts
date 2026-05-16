@@ -17,6 +17,7 @@ import { createHash } from "node:crypto";
 import Redis from "ioredis";
 import { env } from "./config/env";
 import { logger } from "./lib/logger";
+import { traced, addSpanAttrs } from "./lib/tracing";
 
 const MEMGC_URL = env.MEMGC_URL;
 const ANSWER_CACHE_TTL = 300; // 5 minutes
@@ -113,6 +114,14 @@ export async function memgcOpen(): Promise<{ ready: boolean; db_path?: string }>
  * Returns empty memory + warning on any failure (memgc-service down, timeout).
  */
 export async function memgcAnswer(question: string, opts: { ttl?: number } = {}): Promise<AnswerResult> {
+  return traced(
+    "feedme.memgc.answer",
+    { "feedme.memgc.question_preview": question.slice(0, 80) },
+    () => memgcAnswerInner(question, opts),
+  );
+}
+
+async function memgcAnswerInner(question: string, opts: { ttl?: number }): Promise<AnswerResult> {
   const ttl = opts.ttl ?? ANSWER_CACHE_TTL;
   const key = answerCacheKey(question);
 
@@ -124,6 +133,10 @@ export async function memgcAnswer(question: string, opts: { ttl?: number } = {})
       if (cached) {
         logger.debug({ key }, "[MEMGC] cache hit");
         const parsed = JSON.parse(cached) as AnswerResult;
+        addSpanAttrs({
+          "feedme.memgc.cached": true,
+          "feedme.memgc.memory_count": parsed.memories.length,
+        });
         return { ...parsed, cached: true };
       }
     } catch (err) {
@@ -157,12 +170,19 @@ export async function memgcAnswer(question: string, opts: { ttl?: number } = {})
       );
     }
 
+    addSpanAttrs({
+      "feedme.memgc.cached": false,
+      "feedme.memgc.memory_count": result.memories.length,
+      "feedme.memgc.mode": result.mode,
+      "feedme.memgc.elapsed_s": result.elapsed_s ?? duration / 1000,
+    });
     return { ...result, cached: false };
   } catch (err) {
     logger.warn(
       { err: String(err), question_preview: question.slice(0, 80) },
       "[MEMGC] /answer failed — returning empty memory",
     );
+    addSpanAttrs({ "feedme.memgc.fallback": true, "feedme.memgc.error": String(err) });
     return {
       text: "",
       memories: [],

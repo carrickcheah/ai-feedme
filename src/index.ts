@@ -7,6 +7,10 @@
  * Port: 8002
  */
 
+// MUST be first — starts the OpenTelemetry SDK before any HTTP client
+// (openai, fetch) is constructed. Otherwise outbound calls are not traced.
+import "./instrumentation";
+
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";

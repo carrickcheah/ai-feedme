@@ -24,6 +24,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
+    "@opentelemetry/exporter-trace-otlp-http": "0.214.0",
+    "@opentelemetry/sdk-node": "0.208.0",
     "hono": "^4.6.0",
     "ioredis": "^5.4.1",
     "kafkajs": "^2.2.4",

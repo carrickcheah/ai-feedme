@@ -15,6 +15,7 @@ import { ulid } from "ulid";
 import { chat, listTools, callTool, toOpenAITools, parsePrefixed } from "../brain";
 import type { ChatMessage, ChatTool, ChatToolCall, McpServerName } from "../brain";
 import { logger } from "../lib/logger";
+import { traced, addSpanAttrs } from "../lib/tracing";
 import type { AgentName } from "../config/env";
 
 export interface AgentResult {
@@ -82,13 +83,24 @@ async function executeToolCall(tc: ChatToolCall): Promise<ChatMessage> {
       }),
     };
   }
-  const result = await callTool(parsed.server, parsed.tool, args);
-  const text = result.content.map((c) => c.text).join("\n");
-  return {
-    role: "tool",
-    tool_call_id: tc.id,
-    content: text || JSON.stringify({ ok: true }),
-  };
+  return traced(
+    "feedme.tool.call",
+    {
+      "feedme.mcp.server": parsed.server,
+      "feedme.mcp.tool": parsed.tool,
+      "feedme.tool.fq_name": tc.function.name,
+    },
+    async () => {
+      const result = await callTool(parsed.server, parsed.tool, args);
+      const text = result.content.map((c) => c.text).join("\n");
+      addSpanAttrs({ "feedme.tool.response_chars": text.length });
+      return {
+        role: "tool" as const,
+        tool_call_id: tc.id,
+        content: text || JSON.stringify({ ok: true }),
+      };
+    },
+  );
 }
 
 /**
@@ -102,6 +114,19 @@ async function executeToolCall(tc: ChatToolCall): Promise<ChatMessage> {
  */
 export async function runAgent(options: AgentRunOptions): Promise<AgentResult> {
   const session_id = options.sessionId ?? `sess_${ulid()}`;
+  return traced(
+    "feedme.agent.run",
+    {
+      "feedme.agent": options.agent,
+      "feedme.session_id": session_id,
+      "feedme.memory.injected": Boolean(options.memoryContext),
+      "feedme.mcp.allowed": options.allowedMcpServers.join(","),
+    },
+    () => runAgentInner(options, session_id),
+  );
+}
+
+async function runAgentInner(options: AgentRunOptions, session_id: string): Promise<AgentResult> {
   const maxTurns = options.maxAgentTurns ?? DEFAULT_MAX_AGENT_TURNS;
   const maxTokens = options.maxCompletionTokens ?? DEFAULT_MAX_COMPLETION_TOKENS;
   const startedAt = Date.now();
@@ -165,12 +190,22 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentResult> {
           },
           "[AGENT] complete",
         );
+        const cost = estimateCostUsd(totals.input, totals.output, totals.reasoning);
+        addSpanAttrs({
+          "feedme.turns": turn + 1,
+          "feedme.tools_called.count": tools_called.length,
+          "feedme.tokens.input": totals.input,
+          "feedme.tokens.output": totals.output,
+          "feedme.tokens.reasoning": totals.reasoning,
+          "feedme.cost_usd": cost,
+          "feedme.success": true,
+        });
         return {
           output: result.output,
           session_id,
           tools_called,
           tokens: totals,
-          cost_usd: estimateCostUsd(totals.input, totals.output, totals.reasoning),
+          cost_usd: cost,
           duration_ms: Date.now() - startedAt,
           success: true,
         };
@@ -197,18 +232,31 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentResult> {
     const lastAssistant = [...stack].reverse().find((m) => m.role === "assistant");
     const final = lastAssistant?.content || "(no final response — turn limit hit)";
     logger.warn({ agent: options.agent, session_id, maxTurns }, "[AGENT] hit turn limit");
+    const cost = estimateCostUsd(totals.input, totals.output, totals.reasoning);
+    addSpanAttrs({
+      "feedme.turns": maxTurns,
+      "feedme.tools_called.count": tools_called.length,
+      "feedme.cost_usd": cost,
+      "feedme.success": true,
+      "feedme.turn_limit_hit": true,
+    });
     return {
       output: final,
       session_id,
       tools_called,
       tokens: totals,
-      cost_usd: estimateCostUsd(totals.input, totals.output, totals.reasoning),
+      cost_usd: cost,
       duration_ms: Date.now() - startedAt,
       success: true,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     logger.error({ agent: options.agent, session_id, error: msg }, "[AGENT] failed");
+    addSpanAttrs({
+      "feedme.success": false,
+      "feedme.error": msg,
+      "feedme.tools_called.count": tools_called.length,
+    });
     return {
       output: "",
       session_id,
