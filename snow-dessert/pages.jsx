@@ -262,7 +262,7 @@ const KITCHEN_DATA = {
 };
 
 const INVENTORY_DATA = {
-  agent: "Inventory Agent",
+  agent: "Inventory Agent (Internal Support)",
   agentLabel: "Inventory Agent",
   tagline: "Event-driven · triggers on ingredient.consumed · MCP: supplier",
   kpis: [
