@@ -19,8 +19,11 @@ function renderMarkdownSafely(md) {
 }
 
 // ─── SVG page (architecture diagrams etc) ──────────────────────
+// Cache-bust the SVG URL with a per-page-load timestamp so iterative
+// diagram edits surface immediately without forcing a hard-reload.
 function SvgPage({ src, title }) {
-  const url = RAW_BASE + src;
+  const cb = usePageRef(Date.now()).current;
+  const url = `${RAW_BASE}${src}?cb=${cb}`;
   return (
     <div className="fm-doc fm-svg-page">
       {title && <h1 className="fm-doc-title">{title}</h1>}
