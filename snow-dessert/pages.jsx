@@ -237,7 +237,7 @@ function DashboardPage({ agent, tagline, kpis, chart, activity, agentLabel }) {
 
 // ─── Mock data for each agent dashboard ─────────────────────────
 const KITCHEN_DATA = {
-  agent: "Kitchen Agent",
+  agent: "Kitchen Agent (Internal Support)",
   agentLabel: "Kitchen Agent",
   tagline: "Event-driven · triggers on order.created · MCPs: pos, kitchen-display, supplier",
   kpis: [
