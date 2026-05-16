@@ -1,10 +1,15 @@
 // pages.jsx — non-kiosk page components.
 // MarkdownPage fetches from GitHub raw, parses via marked CDN,
 // sanitizes via DOMPurify CDN before injecting.
+// DashboardPage renders KPI cards + chart + activity feed + Liquid-style chat bar.
 
-const { useState: usePageState, useEffect: usePageEffect } = React;
+const { useState: usePageState, useEffect: usePageEffect, useRef: usePageRef } = React;
 
 const RAW_BASE = "https://raw.githubusercontent.com/carrickcheah/ai-feedme/main/";
+const CHAT_API_URL =
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? "http://localhost:8002/api/chat/sync"
+    : "/api/chat/sync";
 
 function renderMarkdownSafely(md) {
   if (!window.marked) return { __html: "" };
@@ -22,8 +27,7 @@ function MarkdownPage({ file, title }) {
     if (!file) return;
     setMd("");
     setError(null);
-    const url = RAW_BASE + file;
-    fetch(url)
+    fetch(RAW_BASE + file)
       .then((r) => r.ok ? r.text() : Promise.reject(new Error("HTTP " + r.status)))
       .then(setMd)
       .catch((e) => setError(e.message));
@@ -45,65 +49,211 @@ function MarkdownPage({ file, title }) {
   );
 }
 
-// ─── Agent info card ────────────────────────────────────────────
-function AgentInfoPage({ name, role, trigger, allowed, downstream, tools, source }) {
+// ─── Liquid-style sticky chat bar with pop-up thread ────────────
+function DashboardChatBar({ agentLabel }) {
+  const [input, setInput] = usePageState("");
+  const [messages, setMessages] = usePageState([]);
+  const [loading, setLoading] = usePageState(false);
+  const [sessionId, setSessionId] = usePageState(null);
+  const [open, setOpen] = usePageState(false);
+  const threadRef = usePageRef(null);
+
+  usePageEffect(() => {
+    if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
+  }, [messages, loading]);
+
+  const send = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+    setInput("");
+    setMessages((m) => [...m, { role: "user", text }]);
+    setOpen(true);
+    setLoading(true);
+    try {
+      const res = await fetch(CHAT_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, session_id: sessionId, channel: "web" }),
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      if (data.session_id) setSessionId(data.session_id);
+      setMessages((m) => [...m, { role: "assistant", text: data.output || "(no response)" }]);
+    } catch (err) {
+      setMessages((m) => [...m, { role: "assistant", text: "Connection error: " + (err.message || err) }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  };
+
   return (
-    <div className="fm-doc">
-      <h1 className="fm-doc-title">{name}</h1>
-      <div className="fm-agent-meta">
-        <div><strong>Role:</strong> {role}</div>
-        <div><strong>Triggered by:</strong> <code>{trigger}</code></div>
-        <div><strong>MCP allowlist:</strong> {allowed.map((a, i) => (
-          <React.Fragment key={a}>{i > 0 && " "}<code>{a}</code></React.Fragment>
-        ))}</div>
-        <div><strong>Publishes downstream:</strong> {downstream ? <code>{downstream}</code> : "(terminal)"}</div>
+    <React.Fragment>
+      {open && (messages.length > 0 || loading) && (
+        <div className="fm-chatpop">
+          <div className="fm-chatpop-head">
+            <span className="fm-chatpop-title">Chat with {agentLabel}</span>
+            <button
+              className="fm-chatpop-close"
+              aria-label="Close chat"
+              onClick={() => { setOpen(false); setMessages([]); }}
+            >×</button>
+          </div>
+          <div className="fm-chatpop-thread" ref={threadRef}>
+            {messages.map((m, i) => (
+              <div key={i} className={m.role === "user" ? "fm-chatpop-user" : "fm-chatpop-asst"}>
+                {m.text}
+              </div>
+            ))}
+            {loading && <div className="fm-chatpop-asst fm-chatpop-typing">…</div>}
+          </div>
+        </div>
+      )}
+      <div className="fm-chatbar">
+        <input
+          className="fm-chatbar-input"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={`Chat with ${agentLabel}…`}
+          disabled={loading}
+        />
+        <button
+          className={"fm-chatbar-send" + (input.trim() ? " active" : "")}
+          onClick={send}
+          disabled={loading || !input.trim()}
+          aria-label="Send"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M9 17V8.5L19 12L9 15.5V17z" fill="currentColor"/>
+            <path d="M5 12h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        </button>
       </div>
-      <h2>Tools commonly called</h2>
-      <ul>
-        {tools.map((t) => <li key={t}><code>{t}</code></li>)}
-      </ul>
-      <div className="fm-agent-src">
-        Source: <code>{source}</code> · Shared loop: <code>src/agents/agent-base.ts</code>
+    </React.Fragment>
+  );
+}
+
+// ─── KPI card grid + chart + activity feed dashboard ────────────
+function KPI({ value, label, tone }) {
+  return (
+    <div className="fm-kpi">
+      <div className={"fm-kpi-value" + (tone ? " " + tone : "")}>{value}</div>
+      <div className="fm-kpi-label">{label}</div>
+    </div>
+  );
+}
+
+function BarChart({ title, values, labels }) {
+  const max = Math.max(...values, 1);
+  return (
+    <div className="fm-card">
+      <div className="fm-card-title">{title}</div>
+      <div className="fm-chart-bars">
+        {values.map((v, i) => (
+          <div key={i} className="fm-chart-col">
+            <div className="fm-chart-bar" style={{ height: (v / max * 100) + "%" }} />
+            <div className="fm-chart-label">{labels[i]}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function KitchenAgentPage() {
+function ActivityFeed({ title, rows }) {
   return (
-    <AgentInfoPage
-      name="Kitchen Agent"
-      role="Event-driven. Builds a synthetic prompt from the order payload, fires kitchen-display + supplier tool calls, then dedupes by ingredient and publishes one ingredient.consumed event per unique ingredient."
-      trigger="order.created"
-      allowed={["pos", "kitchen-display", "supplier"]}
-      downstream="ingredient.consumed"
-      tools={[
-        "kitchen-display__send_ticket",
-        "supplier__record_ingredient_consumption",
-        "pos__search_menu (optional, for menu metadata)",
-      ]}
-      source="src/agents/kitchen.ts"
-    />
+    <div className="fm-card">
+      <div className="fm-card-title">{title}</div>
+      <div className="fm-activity">
+        {rows.map((r, i) => (
+          <div key={i} className="fm-activity-row">
+            <span className="fm-activity-time">{r.time}</span>
+            <span className="fm-activity-id">{r.id}</span>
+            <span className="fm-activity-text">{r.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
-function InventoryAgentPage() {
+function DashboardPage({ agent, tagline, kpis, chart, activity, agentLabel }) {
   return (
-    <AgentInfoPage
-      name="Inventory Agent"
-      role="Event-driven. Checks par level on each consumption. Reorders via supplier__place_order when stock <= par. If stock < par, publishes stock.low which flips affected menu_items to is_available=0 via the 86-propagator."
-      trigger="ingredient.consumed"
-      allowed={["supplier"]}
-      downstream="stock.low → 86-propagator (SQL only)"
-      tools={[
-        "supplier__get_ingredient_stock",
-        "supplier__list_suppliers",
-        "supplier__place_order",
-      ]}
-      source="src/agents/inventory.ts"
-    />
+    <div className="fm-dashboard">
+      <div className="fm-dash-head">
+        <h1 className="fm-dash-title">{agent}</h1>
+        <div className="fm-dash-tagline">{tagline}</div>
+      </div>
+      <div className="fm-kpi-grid">
+        {kpis.map((k, i) => <KPI key={i} {...k} />)}
+      </div>
+      <BarChart {...chart} />
+      <ActivityFeed title="Recent activity" rows={activity} />
+      <DashboardChatBar agentLabel={agentLabel} />
+    </div>
   );
 }
+
+// ─── Mock data for each agent dashboard ─────────────────────────
+const KITCHEN_DATA = {
+  agent: "Kitchen Agent",
+  agentLabel: "Kitchen Agent",
+  tagline: "Event-driven · triggers on order.created · MCPs: pos, kitchen-display, supplier",
+  kpis: [
+    { value: "24",     label: "tickets today" },
+    { value: "7m 22s", label: "avg cook time" },
+    { value: "95%",    label: "on-time rate" },
+    { value: "3",      label: "in queue", tone: "warn" },
+  ],
+  chart: {
+    title: "Tickets per hour",
+    labels: ["9a","10a","11a","12p","1p","2p","3p","4p","5p","6p"],
+    values: [1, 2, 3, 4, 6, 8, 6, 3, 2, 1],
+  },
+  activity: [
+    { time: "14:32", id: "ORD-9871", text: "Mango Iceyoo × 2 · sent to bar" },
+    { time: "14:28", id: "ORD-9870", text: "(Any 2) YooYoo Saver · in progress" },
+    { time: "14:25", id: "ORD-9869", text: "Korean Chicken Wings (6 pcs)" },
+    { time: "14:21", id: "ORD-9868", text: "Oreo Cheesecake Bingsu" },
+    { time: "14:17", id: "ORD-9867", text: "Mango Iceyoo × 1 · completed" },
+    { time: "14:11", id: "ORD-9866", text: "Tutti Frutti Ice Blended" },
+  ],
+};
+
+const INVENTORY_DATA = {
+  agent: "Inventory Agent",
+  agentLabel: "Inventory Agent",
+  tagline: "Event-driven · triggers on ingredient.consumed · MCP: supplier",
+  kpis: [
+    { value: "47", label: "ingredients" },
+    { value: "3",  label: "below par",     tone: "warn" },
+    { value: "2",  label: "reorders today" },
+    { value: "5",  label: "items 86'd",    tone: "warn" },
+  ],
+  chart: {
+    title: "Stock levels (% of par)",
+    labels: ["Mango","Milk","Oreo","Ice","Cream","Chicken","Sugar","Strawberry","Coffee","Mint"],
+    values: [85, 72, 40, 90, 15, 60, 25, 80, 55, 35],
+  },
+  activity: [
+    { time: "14:30", id: "STOCK.LOW", text: "Cream cheese: 0.5kg / 3kg par" },
+    { time: "14:25", id: "REORDER",   text: "Mango syrup × 5kg · supplier B" },
+    { time: "13:50", id: "STOCK.LOW", text: "Oreo crumbs: 0.2kg / 1kg par" },
+    { time: "13:45", id: "AUTO-86",   text: "Oreo Cheesecake Bingsu disabled" },
+    { time: "13:40", id: "REORDER",   text: "Chicken wings × 10kg · supplier A" },
+    { time: "13:22", id: "STOCK.LOW", text: "Mint leaves: 80g / 200g par" },
+  ],
+};
+
+function KitchenAgentPage()   { return <DashboardPage {...KITCHEN_DATA} />; }
+function InventoryAgentPage() { return <DashboardPage {...INVENTORY_DATA} />; }
 
 // ─── Placeholder for items without a backing doc ────────────────
 function ComingSoonPage({ what }) {
@@ -123,8 +273,9 @@ function ComingSoonPage({ what }) {
 
 Object.assign(window, {
   MarkdownPage,
-  AgentInfoPage,
   KitchenAgentPage,
   InventoryAgentPage,
   ComingSoonPage,
+  DashboardPage,
+  DashboardChatBar,
 });

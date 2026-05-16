@@ -779,19 +779,42 @@ function App() {
 
   const chatPanel = <window.ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />;
 
-  // Mobile: always kiosk fullscreen, sidebar + iPhone frame both hidden.
+  // Mobile: kiosk for the customer-facing route, dashboard pages for the
+  // others. Sidebar + iPhone frame always hidden on mobile.
   // fm-mobile (positioned) is the containing block for ChatPanel's absolute
   // positioning so translateY(100%) actually moves it below the viewport.
   if (isMobile) {
+    const isKioskRoute = !route || route === "app/customer-facing-agent";
+    const navItem = window.findNavItem ? window.findNavItem(route) : null;
     return (
       <div className="fm-mobile">
         <div className="fm-mobile-scroll">
-          <OrderPage
-            onChatClick={() => setChatOpen(true)}
-            onMenuClick={() => setNavOpen(true)}
-          />
+          {isKioskRoute ? (
+            <OrderPage
+              onChatClick={() => setChatOpen(true)}
+              onMenuClick={() => setNavOpen(true)}
+            />
+          ) : (
+            <div className="fm-mobile-dash">
+              <header className="fm-mobile-dash-head">
+                <button
+                  className="fm-mobile-dash-ham"
+                  aria-label="Open menu"
+                  onClick={() => setNavOpen(true)}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 7h16M4 12h16M4 17h16" stroke="#111" strokeWidth="2.2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+                <span className="fm-mobile-dash-title">{navItem ? navItem.label : "FeedMe"}</span>
+              </header>
+              <div className="fm-mobile-dash-body">
+                {renderPage(route, () => {}, null).content}
+              </div>
+            </div>
+          )}
         </div>
-        {chatPanel}
+        {isKioskRoute && chatPanel}
         <window.MobileNav open={navOpen} onClose={() => setNavOpen(false)} />
       </div>
     );
