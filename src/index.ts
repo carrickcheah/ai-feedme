@@ -60,7 +60,7 @@ app.get("/", (c) =>
     phase: "1 (Day 1 — minimal agent)",
     restaurant: env.RESTAURANT_NAME,
     endpoints: ["/health", "/ready", "/api/chat/sync"],
-    docs: "see PLAN.md in repo root",
+    docs: "see docs/PLAN.md",
   })
 );
 

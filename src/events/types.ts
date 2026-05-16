@@ -1,5 +1,5 @@
 /**
- * Kafka event envelopes — see SCHEMAS.md §2.
+ * Kafka event envelopes — see docs/SCHEMAS.md §2.
  */
 
 export interface EventEnvelope<T> {

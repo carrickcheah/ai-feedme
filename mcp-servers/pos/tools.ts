@@ -2,7 +2,7 @@
  * POS MCP — 4 tool definitions + dispatcher.
  *
  * Tools: search_menu, get_order, create_order, update_order_status
- * See SCHEMAS.md §4.1 for the contract.
+ * See docs/SCHEMAS.md §4.1 for the contract.
  */
 import { ulid } from "ulid";
 import type { ToolDefinition, MCPToolResult, ToolHandler } from "../shared/types";
