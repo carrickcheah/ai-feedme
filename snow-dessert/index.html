@@ -267,7 +267,8 @@
     border-bottom: 1px solid #f1eee5;
   }
   .fm-chatpop-title { font-size: 13px; font-weight: 600; color: #1a1a1a; }
-  .fm-chatpop-close {
+  .fm-chatpop-actions { display: flex; gap: 6px; align-items: center; }
+  .fm-chatpop-btn {
     width: 28px; height: 28px;
     border-radius: 50%;
     background: #f5f1e8;
@@ -276,8 +277,9 @@
     cursor: pointer;
     font-size: 18px;
     line-height: 1;
+    display: flex; align-items: center; justify-content: center;
   }
-  .fm-chatpop-close:hover { background: #ebe6d8; color: #333; }
+  .fm-chatpop-btn:hover { background: #ebe6d8; color: #333; }
   .fm-chatpop-thread {
     flex: 1;
     overflow-y: auto;

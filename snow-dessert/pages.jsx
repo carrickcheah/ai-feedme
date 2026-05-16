@@ -57,10 +57,21 @@ function DashboardChatBar({ agentLabel }) {
   const [sessionId, setSessionId] = usePageState(null);
   const [open, setOpen] = usePageState(false);
   const threadRef = usePageRef(null);
+  const inputRef = usePageRef(null);
 
+  // Auto-scroll thread on new content.
   usePageEffect(() => {
     if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
   }, [messages, loading]);
+
+  // Refocus the input after the LLM response lands, so the user can
+  // immediately type the next message without re-clicking.
+  usePageEffect(() => {
+    if (!loading && open && inputRef.current) {
+      const id = setTimeout(() => inputRef.current && inputRef.current.focus(), 50);
+      return () => clearTimeout(id);
+    }
+  }, [loading, open]);
 
   const send = async () => {
     const text = input.trim();
@@ -99,11 +110,24 @@ function DashboardChatBar({ agentLabel }) {
         <div className="fm-chatpop">
           <div className="fm-chatpop-head">
             <span className="fm-chatpop-title">Chat with {agentLabel}</span>
-            <button
-              className="fm-chatpop-close"
-              aria-label="Close chat"
-              onClick={() => { setOpen(false); setMessages([]); }}
-            >×</button>
+            <div className="fm-chatpop-actions">
+              <button
+                className="fm-chatpop-btn"
+                aria-label="Minimize chat"
+                title="Minimize"
+                onClick={() => setOpen(false)}
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 12h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </button>
+              <button
+                className="fm-chatpop-btn"
+                aria-label="Close chat (clears thread)"
+                title="Close (clears thread)"
+                onClick={() => { setOpen(false); setMessages([]); setSessionId(null); }}
+              >×</button>
+            </div>
           </div>
           <div className="fm-chatpop-thread" ref={threadRef}>
             {messages.map((m, i) => (
@@ -117,23 +141,33 @@ function DashboardChatBar({ agentLabel }) {
       )}
       <div className="fm-chatbar">
         <input
+          ref={inputRef}
           className="fm-chatbar-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onFocus={() => { if (messages.length > 0) setOpen(true); }}
           onKeyDown={onKeyDown}
-          placeholder={`Chat with ${agentLabel}…`}
-          disabled={loading}
+          placeholder={loading ? "Waiting for response…" : `Chat with ${agentLabel}…`}
         />
         <button
-          className={"fm-chatbar-send" + (input.trim() ? " active" : "")}
+          className={"fm-chatbar-send" + (input.trim() && !loading ? " active" : "")}
           onClick={send}
           disabled={loading || !input.trim()}
           aria-label="Send"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M9 17V8.5L19 12L9 15.5V17z" fill="currentColor"/>
-            <path d="M5 12h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
+          {loading ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeOpacity="0.25"/>
+              <path d="M21 12a9 9 0 00-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.9s" repeatCount="indefinite"/>
+              </path>
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M9 17V8.5L19 12L9 15.5V17z" fill="currentColor"/>
+              <path d="M5 12h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          )}
         </button>
       </div>
     </React.Fragment>
