@@ -187,11 +187,17 @@
   .fm-activity-id   { color: #1a1a1a; font-weight: 600; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; }
   .fm-activity-text { color: #444; }
 
-  /* ── Liquid-style chat bar + popup ────────────────────────── */
+  /* ── Floating chat dock (Liquid-style) ─────────────────────
+     position:fixed so it floats over the viewport bottom regardless
+     of scroll. On desktop, offset by 260px sidebar so it centers in
+     the main area; on mobile, full-width minus 12px padding.
+  */
   .fm-chatbar {
-    position: sticky;
+    position: fixed;
     bottom: 20px;
-    margin: 24px auto 0;
+    left: 260px;
+    right: 0;
+    margin: 0 auto;
     max-width: 680px;
     background: #fff;
     border-radius: 999px;
@@ -199,7 +205,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.04);
+    z-index: 30;
   }
   .fm-chatbar-input {
     flex: 1;
@@ -320,6 +327,13 @@
   @media (max-width: 767px) {
     .fm-kpi-grid { grid-template-columns: 1fr 1fr; }
     .fm-dashboard { padding-bottom: 100px; }
+    .fm-mobile-dash-body { padding: 14px 14px 100px; }
+    .fm-chatbar {
+      left: 12px;
+      right: 12px;
+      max-width: none;
+      bottom: 14px;
+    }
     .fm-chatpop {
       width: calc(100vw - 24px);
       bottom: 80px;
