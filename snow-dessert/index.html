@@ -5,8 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>FeedMe — Agentic AI Prototype</title>
 <style>
-  html, body { margin: 0; padding: 0; background: #e9e7e2; font-family: -apple-system, "SF Pro", system-ui, sans-serif; color: #1a1a1a; }
-  #root { min-height: 100vh; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #e9e7e2;
+    font-family: -apple-system, "SF Pro", system-ui, sans-serif;
+    color: #1a1a1a;
+    max-width: 100vw;
+    overflow-x: hidden;        /* never allow horizontal scroll */
+  }
+  #root { min-height: 100vh; max-width: 100vw; overflow-x: hidden; }
   a { color: inherit; }
 
   /* ── Desktop shell ─────────────────────────────────────────── */
@@ -332,8 +340,16 @@
   /* Mobile-only dashboard tweaks: KPI grid → 2 cols, popup full-width */
   @media (max-width: 767px) {
     .fm-kpi-grid { grid-template-columns: 1fr 1fr; }
-    .fm-dashboard { padding-bottom: 100px; }
+    .fm-dashboard { padding-bottom: 100px; width: 100%; max-width: 100%; }
+    .fm-mobile-dash, .fm-mobile-dash-body, .fm-mobile-scroll {
+      width: 100%; max-width: 100%; overflow-x: hidden;
+    }
     .fm-mobile-dash-body { padding: 14px 14px 100px; }
+    .fm-dash-head, .fm-card, .fm-kpi {
+      max-width: 100%;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+    }
     .fm-chatbar {
       left: 12px;
       right: 12px;
@@ -347,8 +363,13 @@
     }
     .fm-activity-row { grid-template-columns: 50px 1fr; }
     .fm-activity-id { display: none; }
+    .fm-activity-text { overflow-wrap: anywhere; }
     .fm-dash-head { padding: 18px 20px; }
-    .fm-dash-title { font-size: 22px; }
+    .fm-dash-title { font-size: 22px; word-wrap: break-word; }
+    .fm-dash-tagline { word-wrap: break-word; }
+    /* Chart bar labels can be wider than their column; allow them to
+       stack so the chart row doesn't push the page sideways. */
+    .fm-chart-label { font-size: 10px; }
   }
 
   /* ── Doc / agent card ─────────────────────────────────────── */
