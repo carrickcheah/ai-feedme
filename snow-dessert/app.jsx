@@ -762,7 +762,12 @@ function renderPage(route, onChatClick, chatPanel) {
   if (route === "docs/cicd")           return { kind: "dashboard", content: <window.ComingSoonPage what="CI/CD" /> };
 
   const item = window.findNavItem(route);
-  if (item && item.file) return { kind: "dashboard", content: <window.MarkdownPage file={item.file} title={item.label} /> };
+  if (item && item.file) {
+    if (item.file.endsWith(".svg")) {
+      return { kind: "dashboard", content: <window.SvgPage src={item.file} title={item.label} /> };
+    }
+    return { kind: "dashboard", content: <window.MarkdownPage file={item.file} title={item.label} /> };
+  }
   return { kind: "dashboard", content: <window.ComingSoonPage what={item ? item.label : "Page not found"} /> };
 }
 
