@@ -8,9 +8,11 @@
  * describes the new order; the agent reasons about which tickets to fire and
  * which ingredients were consumed.
  */
+import { Database } from "bun:sqlite";
 import { runAgent } from "./agent-base";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
+import { publishIngredientConsumed } from "../events/publisher";
 
 export interface OrderCreatedEvent {
   order_id: string;
@@ -87,4 +89,46 @@ export async function handleOrderCreated(event: OrderCreatedEvent): Promise<void
     },
     "[AGENT:kitchen] done",
   );
+
+  // After Kitchen finishes, publish one ingredient.consumed event per consumed row.
+  // This is the bridge to the Inventory Agent + auto-86 chain.
+  // We query supplier.db rather than parsing the agent's tool trace — simpler + reliable.
+  try {
+    const db = new Database("./data/supplier.db", { readonly: true });
+    const rows = db
+      .prepare(
+        `SELECT ic.ingredient_id, ic.qty, i.stock_qty AS remaining_stock
+         FROM ingredient_consumption ic
+         LEFT JOIN ingredient i ON i.ingredient_id = ic.ingredient_id
+         WHERE ic.order_id = ?
+         ORDER BY ic.id DESC`,
+      )
+      .all(event.order_id) as Array<{ ingredient_id: string; qty: number; remaining_stock: number | null }>;
+    db.close();
+
+    if (!rows.length) {
+      logger.warn({ order_id: event.order_id }, "[AGENT:kitchen] no consumption rows to publish");
+      return;
+    }
+
+    // De-duplicate by ingredient_id (one event per unique ingredient for this order)
+    const seen = new Set<string>();
+    for (const r of rows) {
+      if (seen.has(r.ingredient_id)) continue;
+      seen.add(r.ingredient_id);
+      await publishIngredientConsumed({
+        order_id: event.order_id,
+        ticket_id: null,
+        ingredient_id: r.ingredient_id,
+        qty: r.qty,
+        remaining_stock: r.remaining_stock ?? 0,
+      });
+    }
+    logger.info({ order_id: event.order_id, count: seen.size }, "[AGENT:kitchen] ingredient.consumed events dispatched");
+  } catch (err) {
+    logger.error(
+      { order_id: event.order_id, err: err instanceof Error ? err.message : String(err) },
+      "[AGENT:kitchen] failed to publish ingredient.consumed",
+    );
+  }
 }

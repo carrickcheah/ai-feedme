@@ -12,6 +12,8 @@ import { Kafka, type Producer } from "kafkajs";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import { handleOrderCreated as kitchenHandleOrderCreated } from "../agents/kitchen";
+import { handleIngredientConsumed as inventoryHandleIngredientConsumed } from "../agents/inventory";
+import { handleStockLow as propagatorHandleStockLow } from "./86-propagator";
 import type {
   EventEnvelope,
   OrderCreatedData,
@@ -136,14 +138,30 @@ export async function publishIngredientConsumed(
   data: IngredientConsumedData,
   traceId?: string,
 ): Promise<PublishResult> {
-  return publishOrFallback(env.KAFKA_TOPIC_INGREDIENT_CONSUMED, data, null, traceId);
+  return publishOrFallback(
+    env.KAFKA_TOPIC_INGREDIENT_CONSUMED,
+    data,
+    async (d) => {
+      logger.info({ ingredient_id: d.ingredient_id }, "[FALLBACK] invoking inventory handler in-process");
+      await inventoryHandleIngredientConsumed(d);
+    },
+    traceId,
+  );
 }
 
 export async function publishStockLow(
   data: StockLowData,
   traceId?: string,
 ): Promise<PublishResult> {
-  return publishOrFallback(env.KAFKA_TOPIC_STOCK_LOW, data, null, traceId);
+  return publishOrFallback(
+    env.KAFKA_TOPIC_STOCK_LOW,
+    data,
+    async (d) => {
+      logger.info({ ingredient_id: d.ingredient_id, affected: d.affected_skus.length }, "[FALLBACK] invoking 86-propagator in-process");
+      await propagatorHandleStockLow(d);
+    },
+    traceId,
+  );
 }
 
 export async function publishTicketReady(

@@ -1,7 +1,7 @@
 /**
  * Event system — Kafka producer + consumers with in-process fallback.
  */
-import { startKitchenConsumer, shutdownConsumers } from "./consumers";
+import { startKitchenConsumer, startInventoryConsumer, startStockLowConsumer, shutdownConsumers } from "./consumers";
 import { shutdownProducer, kafkaStatus } from "./publisher";
 import { logger } from "../lib/logger";
 
@@ -18,7 +18,8 @@ export interface EventSystemStatus {
 export async function startEventSystem(): Promise<EventSystemStatus> {
   let started = 0;
   if (await startKitchenConsumer()) started++;
-  // Future stages: inventory consumer for ingredient.consumed, customer-facing for stock.low
+  if (await startInventoryConsumer()) started++;
+  if (await startStockLowConsumer()) started++;
 
   const status = kafkaStatus();
   logger.info(

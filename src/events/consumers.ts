@@ -9,7 +9,9 @@ import { Kafka, type Consumer } from "kafkajs";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
 import { handleOrderCreated as kitchenHandleOrderCreated } from "../agents/kitchen";
-import type { EventEnvelope, OrderCreatedData } from "./types";
+import { handleIngredientConsumed as inventoryHandleIngredientConsumed } from "../agents/inventory";
+import { handleStockLow as propagatorHandleStockLow } from "./86-propagator";
+import type { EventEnvelope, OrderCreatedData, IngredientConsumedData, StockLowData } from "./types";
 
 let kafkaClient: Kafka | null = null;
 const consumers: Consumer[] = [];
@@ -60,12 +62,12 @@ export async function startKitchenConsumer(): Promise<boolean> {
       eachMessage: async ({ message }) => {
         try {
           if (!message.value) return;
-          const env = JSON.parse(message.value.toString()) as EventEnvelope<OrderCreatedData>;
+          const envelope = JSON.parse(message.value.toString()) as EventEnvelope<OrderCreatedData>;
           logger.info(
-            { event_id: env.event_id, order_id: env.data.order_id },
+            { event_id: envelope.event_id, order_id: envelope.data.order_id },
             "[KAFKA:kitchen-consumer] message received",
           );
-          await kitchenHandleOrderCreated(env.data);
+          await kitchenHandleOrderCreated(envelope.data);
         } catch (err) {
           logger.error(
             { err: err instanceof Error ? err.message : String(err) },
@@ -78,6 +80,68 @@ export async function startKitchenConsumer(): Promise<boolean> {
 
   consumers.push(consumer);
   logger.info({ topic: env.KAFKA_TOPIC_ORDER_CREATED }, "[KAFKA] kitchen consumer running");
+  return true;
+}
+
+/** Subscribe Inventory Agent to ingredient.consumed events. */
+export async function startInventoryConsumer(): Promise<boolean> {
+  const consumer = getKafka().consumer({ groupId: "inventory-agent" });
+  if (!(await startConsumerWithTimeout(consumer, env.KAFKA_TOPIC_INGREDIENT_CONSUMED))) return false;
+
+  consumer
+    .run({
+      eachMessage: async ({ message }) => {
+        try {
+          if (!message.value) return;
+          const envelope = JSON.parse(message.value.toString()) as EventEnvelope<IngredientConsumedData>;
+          logger.info(
+            { event_id: envelope.event_id, ingredient_id: envelope.data.ingredient_id },
+            "[KAFKA:inventory-consumer] message received",
+          );
+          await inventoryHandleIngredientConsumed(envelope.data);
+        } catch (err) {
+          logger.error(
+            { err: err instanceof Error ? err.message : String(err) },
+            "[KAFKA:inventory-consumer] handler error",
+          );
+        }
+      },
+    })
+    .catch((err) => logger.error({ err: String(err) }, "[KAFKA:inventory-consumer] run() error"));
+
+  consumers.push(consumer);
+  logger.info({ topic: env.KAFKA_TOPIC_INGREDIENT_CONSUMED }, "[KAFKA] inventory consumer running");
+  return true;
+}
+
+/** Subscribe 86-propagator to stock.low events. */
+export async function startStockLowConsumer(): Promise<boolean> {
+  const consumer = getKafka().consumer({ groupId: "stock-low-propagator" });
+  if (!(await startConsumerWithTimeout(consumer, env.KAFKA_TOPIC_STOCK_LOW))) return false;
+
+  consumer
+    .run({
+      eachMessage: async ({ message }) => {
+        try {
+          if (!message.value) return;
+          const envelope = JSON.parse(message.value.toString()) as EventEnvelope<StockLowData>;
+          logger.info(
+            { event_id: envelope.event_id, ingredient_id: envelope.data.ingredient_id, affected: envelope.data.affected_skus.length },
+            "[KAFKA:stock-low-consumer] message received",
+          );
+          await propagatorHandleStockLow(envelope.data);
+        } catch (err) {
+          logger.error(
+            { err: err instanceof Error ? err.message : String(err) },
+            "[KAFKA:stock-low-consumer] handler error",
+          );
+        }
+      },
+    })
+    .catch((err) => logger.error({ err: String(err) }, "[KAFKA:stock-low-consumer] run() error"));
+
+  consumers.push(consumer);
+  logger.info({ topic: env.KAFKA_TOPIC_STOCK_LOW }, "[KAFKA] stock-low consumer running");
   return true;
 }
 
