@@ -24,7 +24,7 @@
   </defs>
 
   <!-- ── Title ─────────────────────────────────────────────────── -->
-  <text x="440" y="36" text-anchor="middle" class="title">MemGC · PRISM answer() flow</text>
+  <text x="440" y="36" text-anchor="middle" class="title">Memory Agents - answer()</text>
   <text x="440" y="56" text-anchor="middle" class="subtitle">10–13 LLM calls per question. Local embedder + reranker handle the heavy lifting.</text>
 
   <!-- ── Legend ─────────────────────────────────────────────────── -->
