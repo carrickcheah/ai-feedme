@@ -191,23 +191,59 @@ function DashboardChatBar({ agentLabel }) {
 }
 
 // ─── KPI card grid + chart + activity feed dashboard ────────────
-function KPI({ value, label, tone }) {
+
+// Small inline icon set — stroke-based, scale to currentColor.
+const KPI_ICONS = {
+  ticket: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 100-4V8z"/><path d="M13 6v2M13 11v2M13 16v2"/></svg>,
+  clock:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>,
+  check:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>,
+  queue:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 4h12M8 4v6l-4 7h16l-4-7V4"/></svg>,
+  pkg:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/></svg>,
+  alert:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4l10 17H2L12 4z"/><path d="M12 10v5M12 18v.5"/></svg>,
+  truck:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>,
+  off:    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M6 6l12 12"/></svg>,
+};
+
+function TrendDelta({ trend }) {
+  if (!trend) return null;
+  const dir = trend.dir || "flat";
+  const arrow = dir === "up" ? "↑" : dir === "down" ? "↓" : "→";
+  const good = (trend.good !== undefined) ? trend.good : (dir === "up");
+  const cls = "fm-kpi-trend " + (dir === "flat" ? "flat" : (good ? "good" : "bad"));
   return (
-    <div className="fm-kpi">
-      <div className={"fm-kpi-value" + (tone ? " " + tone : "")}>{value}</div>
-      <div className="fm-kpi-label">{label}</div>
+    <div className={cls}>
+      <span className="fm-kpi-trend-arrow">{arrow}</span>
+      <span>{trend.delta}</span>
+      {trend.vs && <span className="fm-kpi-trend-vs">{trend.vs}</span>}
+    </div>
+  );
+}
+
+function KPI({ icon, value, label, tone, trend }) {
+  return (
+    <div className={"fm-kpi" + (tone ? " " + tone : "")}>
+      {icon && KPI_ICONS[icon] && (
+        <div className="fm-kpi-icon">{KPI_ICONS[icon]}</div>
+      )}
+      <div className="fm-kpi-main">
+        <div className={"fm-kpi-value" + (tone ? " " + tone : "")}>{value}</div>
+        <div className="fm-kpi-label">{label}</div>
+        <TrendDelta trend={trend} />
+      </div>
     </div>
   );
 }
 
 function BarChart({ title, values, labels }) {
   const max = Math.max(...values, 1);
+  const peakIdx = values.indexOf(max);
   return (
     <div className="fm-card">
       <div className="fm-card-title">{title}</div>
       <div className="fm-chart-bars">
         {values.map((v, i) => (
-          <div key={i} className="fm-chart-col">
+          <div key={i} className={"fm-chart-col" + (i === peakIdx ? " peak" : "")}>
+            {i === peakIdx && <div className="fm-chart-peak">{v}</div>}
             <div className="fm-chart-bar" style={{ height: (v / max * 100) + "%" }} />
             <div className="fm-chart-label">{labels[i]}</div>
           </div>
@@ -225,6 +261,11 @@ function ActivityFeed({ title, rows }) {
         {rows.map((r, i) => (
           <div key={i} className="fm-activity-row">
             <span className="fm-activity-time">{r.time}</span>
+            {r.status && (
+              <span className={"fm-activity-status fm-status-" + r.status.toLowerCase().replace(/[._]/g, "-")}>
+                {r.status}
+              </span>
+            )}
             <span className="fm-activity-id">{r.id}</span>
             <span className="fm-activity-text">{r.text}</span>
           </div>
@@ -234,12 +275,23 @@ function ActivityFeed({ title, rows }) {
   );
 }
 
-function DashboardPage({ agent, tagline, kpis, chart, activity, agentLabel }) {
+function DashboardPage({ agent, tagline, kpis, chart, activity, agentLabel, status }) {
   return (
     <div className="fm-dashboard">
       <div className="fm-dash-head">
-        <h1 className="fm-dash-title">{agent}</h1>
-        <div className="fm-dash-tagline">{tagline}</div>
+        <div className="fm-dash-head-text">
+          <h1 className="fm-dash-title">{agent}</h1>
+          <div className="fm-dash-tagline">{tagline}</div>
+        </div>
+        {status && (
+          <div className="fm-dash-status">
+            <span className="fm-dash-status-dot" />
+            <div>
+              <div className="fm-dash-status-label">{status.label}</div>
+              <div className="fm-dash-status-since">{status.since}</div>
+            </div>
+          </div>
+        )}
       </div>
       <div className="fm-kpi-grid">
         {kpis.map((k, i) => <KPI key={i} {...k} />)}
@@ -256,11 +308,12 @@ const KITCHEN_DATA = {
   agent: "Kitchen Agent (Internal Support)",
   agentLabel: "Kitchen Agent",
   tagline: "Event-driven · triggers on order.created · MCPs: pos, kitchen-display, supplier",
+  status: { label: "Live", since: "updated 2m ago" },
   kpis: [
-    { value: "24",     label: "tickets today" },
-    { value: "7m 22s", label: "avg cook time" },
-    { value: "95%",    label: "on-time rate" },
-    { value: "3",      label: "in queue", tone: "warn" },
+    { icon: "ticket", value: "24",     label: "tickets today",  trend: { delta: "+12%", dir: "up",   vs: "vs yesterday" } },
+    { icon: "clock",  value: "7m 22s", label: "avg cook time",  trend: { delta: "-30s", dir: "down", vs: "vs yesterday", good: true } },
+    { icon: "check",  value: "95%",    label: "on-time rate",   trend: { delta: "+2pp", dir: "up",   vs: "vs yesterday" } },
+    { icon: "queue",  value: "3",      label: "in queue", tone: "warn", trend: { delta: "near par", dir: "flat" } },
   ],
   chart: {
     title: "Tickets per hour",
@@ -268,12 +321,12 @@ const KITCHEN_DATA = {
     values: [1, 2, 3, 4, 6, 8, 6, 3, 2, 1],
   },
   activity: [
-    { time: "14:32", id: "ORD-9871", text: "Mango Iceyoo × 2 · sent to bar" },
-    { time: "14:28", id: "ORD-9870", text: "(Any 2) YooYoo Saver · in progress" },
-    { time: "14:25", id: "ORD-9869", text: "Korean Chicken Wings (6 pcs)" },
-    { time: "14:21", id: "ORD-9868", text: "Oreo Cheesecake Bingsu" },
-    { time: "14:17", id: "ORD-9867", text: "Mango Iceyoo × 1 · completed" },
-    { time: "14:11", id: "ORD-9866", text: "Tutti Frutti Ice Blended" },
+    { time: "14:32", id: "ORD-9871", text: "Mango Iceyoo × 2",          status: "SENT" },
+    { time: "14:28", id: "ORD-9870", text: "(Any 2) YooYoo Saver",      status: "COOKING" },
+    { time: "14:25", id: "ORD-9869", text: "Korean Chicken Wings (6 pcs)", status: "COOKING" },
+    { time: "14:21", id: "ORD-9868", text: "Oreo Cheesecake Bingsu",    status: "READY" },
+    { time: "14:17", id: "ORD-9867", text: "Mango Iceyoo × 1",          status: "DONE" },
+    { time: "14:11", id: "ORD-9866", text: "Tutti Frutti Ice Blended",  status: "DONE" },
   ],
 };
 
@@ -281,11 +334,12 @@ const INVENTORY_DATA = {
   agent: "Inventory Agent (Internal Support)",
   agentLabel: "Inventory Agent",
   tagline: "Event-driven · triggers on ingredient.consumed · MCP: supplier",
+  status: { label: "Live", since: "updated 1m ago" },
   kpis: [
-    { value: "47", label: "ingredients" },
-    { value: "3",  label: "below par",     tone: "warn" },
-    { value: "2",  label: "reorders today" },
-    { value: "5",  label: "items 86'd",    tone: "warn" },
+    { icon: "pkg",   value: "47", label: "ingredients",     trend: { delta: "+2",   dir: "up",   vs: "this week" } },
+    { icon: "alert", value: "3",  label: "below par", tone: "warn", trend: { delta: "+1",   dir: "up",   vs: "since 1pm", good: false } },
+    { icon: "truck", value: "2",  label: "reorders today",  trend: { delta: "on track", dir: "flat" } },
+    { icon: "off",   value: "5",  label: "items 86'd", tone: "warn", trend: { delta: "+2",   dir: "up",   vs: "vs yesterday", good: false } },
   ],
   chart: {
     title: "Stock levels (% of par)",
@@ -293,12 +347,12 @@ const INVENTORY_DATA = {
     values: [85, 72, 40, 90, 15, 60, 25, 80, 55, 35],
   },
   activity: [
-    { time: "14:30", id: "STOCK.LOW", text: "Cream cheese: 0.5kg / 3kg par" },
-    { time: "14:25", id: "REORDER",   text: "Mango syrup × 5kg · supplier B" },
-    { time: "13:50", id: "STOCK.LOW", text: "Oreo crumbs: 0.2kg / 1kg par" },
-    { time: "13:45", id: "AUTO-86",   text: "Oreo Cheesecake Bingsu disabled" },
-    { time: "13:40", id: "REORDER",   text: "Chicken wings × 10kg · supplier A" },
-    { time: "13:22", id: "STOCK.LOW", text: "Mint leaves: 80g / 200g par" },
+    { time: "14:30", id: "ING-204",  text: "Cream cheese: 0.5kg / 3kg par", status: "STOCK.LOW" },
+    { time: "14:25", id: "PO-1142",  text: "Mango syrup × 5kg · supplier B", status: "REORDER" },
+    { time: "13:50", id: "ING-118",  text: "Oreo crumbs: 0.2kg / 1kg par",  status: "STOCK.LOW" },
+    { time: "13:45", id: "MENU-22",  text: "Oreo Cheesecake Bingsu disabled", status: "AUTO-86" },
+    { time: "13:40", id: "PO-1141",  text: "Chicken wings × 10kg · supplier A", status: "REORDER" },
+    { time: "13:22", id: "ING-067",  text: "Mint leaves: 80g / 200g par",   status: "STOCK.LOW" },
   ],
 };
 
