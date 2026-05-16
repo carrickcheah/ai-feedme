@@ -755,13 +755,23 @@ function App() {
   const route = window.useHashRoute();
   const isMobile = useIsMobile();
 
+  // Defensive: chat should never be open by default after a layout switch.
+  // Without this, an open chat on desktop survives a resize to mobile width.
+  React.useEffect(() => {
+    if (isMobile) setChatOpen(false);
+  }, [isMobile]);
+
   const chatPanel = <window.ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />;
 
   // Mobile: always kiosk fullscreen, sidebar + iPhone frame both hidden.
+  // fm-mobile (positioned) is the containing block for ChatPanel's absolute
+  // positioning so translateY(100%) actually moves it below the viewport.
   if (isMobile) {
     return (
       <div className="fm-mobile">
-        <OrderPage onChatClick={() => setChatOpen(true)} />
+        <div className="fm-mobile-scroll">
+          <OrderPage onChatClick={() => setChatOpen(true)} />
+        </div>
         {chatPanel}
       </div>
     );

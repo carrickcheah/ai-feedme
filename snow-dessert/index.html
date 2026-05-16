@@ -175,10 +175,24 @@
   .fm-md hr { border: none; border-top: 1px solid #e8e3d4; margin: 20px 0; }
   .fm-md img { max-width: 100%; }
 
-  /* ── Mobile (kiosk fullscreen, no sidebar, no iPhone frame) ─ */
+  /* ── Mobile (kiosk fullscreen, no sidebar, no iPhone frame) ─
+     fm-mobile is the positioned containing block for the ChatPanel
+     (which uses position:absolute internally). fm-mobile-scroll handles
+     vertical scrolling of the kiosk content inside fixed-viewport bounds,
+     so ChatPanel's transform:translateY(100%) correctly hides it below.
+  */
   .fm-mobile {
-    min-height: 100vh;
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
     background: #fff;
+  }
+  .fm-mobile-scroll {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   @media (max-width: 767px) {
     .fm-desktop { display: none; }
