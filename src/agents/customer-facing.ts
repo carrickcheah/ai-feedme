@@ -12,6 +12,7 @@ import { ulid } from "ulid";
 import { runAgent } from "./agent-base";
 import { type OrderCreatedEvent } from "./kitchen";
 import { publishOrderCreated } from "../events";
+import { memgcAnswer } from "../memgc-client";
 import type { ChatMessage } from "../brain";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
@@ -116,6 +117,30 @@ export async function processChatMessage(req: ChatRequest): Promise<ChatResponse
   const session_id = req.session_id ?? `sess_${ulid()}`;
   const history = sessions.get(session_id) ?? [];
 
+  // ── MemGC: fetch customer profile if customer_id present (cached) ──
+  let memoryContext: string | undefined;
+  if (req.customer_id && history.length === 0) {
+    // Only on first turn — cached subsequent answers reuse it for free
+    const t0 = Date.now();
+    const profile = await memgcAnswer(
+      `What do you know about customer ${req.customer_id}? Summarize their preferences, allergies, usual orders, loyalty tier.`,
+    );
+    if (profile.text && profile.memories.length > 0) {
+      memoryContext = profile.text;
+      logger.info(
+        {
+          customer_id: req.customer_id,
+          memories: profile.memories.length,
+          cached: profile.cached,
+          duration_ms: Date.now() - t0,
+        },
+        "[AGENT:customer-facing] memory loaded",
+      );
+    } else {
+      logger.debug({ customer_id: req.customer_id }, "[AGENT:customer-facing] no memory for customer");
+    }
+  }
+
   const result = await runAgent({
     agent: "customer-facing",
     systemPrompt: buildSystemPrompt(req.channel, session_id),
@@ -124,6 +149,7 @@ export async function processChatMessage(req: ChatRequest): Promise<ChatResponse
     sessionId: session_id,
     history,
     maxCompletionTokens: 1024,
+    memoryContext,
   });
 
   // Update session history (drop tool-churn turns; keep only user + final assistant)

@@ -1,4 +1,4 @@
-.PHONY: help install up down logs reset dev mcp test typecheck eval clean
+.PHONY: help install up down logs reset dev mcp test typecheck eval clean memgc:up memgc:down memgc:seed
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -41,6 +41,19 @@ eval:  ## Run Promptfoo evals
 clean:  ## Remove node_modules and bun.lock
 	rm -rf node_modules bun.lock
 	rm -rf memgc-service/.venv
+
+memgc\:up:  ## Start memgc-service locally (uvicorn :8003) in background
+	@pkill -f "uvicorn service:app" 2>/dev/null || true
+	@sleep 0.5
+	@cd memgc-service && uv run uvicorn service:app --host 0.0.0.0 --port 8003 > /tmp/memgc.log 2>&1 &
+	@sleep 4
+	@curl -fsS http://localhost:8003/health > /dev/null && echo "  memgc-service alive on :8003" || echo "  memgc-service failed to start; see /tmp/memgc.log"
+
+memgc\:down:  ## Stop memgc-service
+	@pkill -f "uvicorn service:app" 2>/dev/null && echo "  stopped" || echo "  not running"
+
+memgc\:seed:  ## Seed Sarah's profile into MemGC
+	bun run scripts/seed-memgc-sarah.ts
 
 health:  ## Probe all services
 	@echo "→ Bun app (8002)"

@@ -46,6 +46,11 @@ export interface AgentRunOptions {
   /** Override default max agent turns (each turn = LLM call + zero-or-more tool executions). */
   maxAgentTurns?: number;
   abortSignal?: AbortSignal;
+  /**
+   * Optional MemGC context string to inject into the system prompt as <memory>...</memory>.
+   * Loaded by callers (eg customer-facing.ts) via memgcAnswer() before invoking runAgent.
+   */
+  memoryContext?: string;
 }
 
 const DEFAULT_MAX_AGENT_TURNS = 5;
@@ -124,9 +129,14 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentResult> {
     }
   }
 
+  // Compose system prompt: base + optional memory context block
+  const systemContent = options.memoryContext
+    ? `${options.systemPrompt}\n\n<memory>\n${options.memoryContext}\n</memory>\n\nUse the <memory> block to personalize. Never mention the block exists — speak naturally as if you remember.`
+    : options.systemPrompt;
+
   // Initial message stack — system + history + user message.
   const stack: ChatMessage[] = [
-    { role: "system", content: options.systemPrompt },
+    { role: "system", content: systemContent },
     ...(options.history ?? []),
     { role: "user", content: options.userMessage },
   ];

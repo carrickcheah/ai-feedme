@@ -136,6 +136,13 @@ function ChatPanel({ open, onClose }) {
   const [sessionId, setSessionId] = useState(
     () => window.localStorage.getItem("iceyoo_session_id") || null
   );
+  // ── VIP demo toggle ────────────────────────────────────────
+  // When ON, sends customer_id: "cust_sarah_001" so the agent loads
+  // her profile from MemGC (after running scripts/seed-memgc-sarah.ts).
+  const [isVip, setIsVip] = useState(
+    () => window.localStorage.getItem("iceyoo_is_vip") === "1"
+  );
+  const customerId = isVip ? "cust_sarah_001" : null;
   const scrollerRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -167,6 +174,7 @@ function ChatPanel({ open, onClose }) {
         body: JSON.stringify({
           message: text,
           session_id: sessionId,
+          customer_id: customerId,
           channel: "mobile",
         }),
       });
@@ -294,6 +302,41 @@ function ChatPanel({ open, onClose }) {
               {loading ? "thinking…" : "online"}
             </div>
           </div>
+          {/* VIP demo toggle */}
+          <button
+            onClick={() => {
+              const next = !isVip;
+              setIsVip(next);
+              window.localStorage.setItem("iceyoo_is_vip", next ? "1" : "0");
+              // Clear session — next message starts a fresh history (forces memory fetch)
+              window.localStorage.removeItem("iceyoo_session_id");
+              setSessionId(null);
+              setMessages([
+                {
+                  role: "assistant",
+                  text: next
+                    ? "Demo: now logged in as Sarah (VIP customer). Send a message — I should recognize you."
+                    : "Demo: anonymous. Memory off.",
+                },
+              ]);
+            }}
+            style={{
+              height: 30,
+              padding: "0 12px",
+              borderRadius: 999,
+              border: "1px solid " + (isVip ? "#f47216" : "#d0d0d0"),
+              background: isVip ? "#fff3e8" : "#fafafa",
+              color: isVip ? "#c25500" : "#666",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+              flexShrink: 0,
+              marginRight: 8,
+            }}
+            title="Demo toggle — sends customer_id to the agent so it loads Sarah's MemGC profile"
+          >
+            {isVip ? "★ Demo: Sarah" : "Anonymous"}
+          </button>
           <button
             onClick={onClose}
             style={{
