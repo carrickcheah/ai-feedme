@@ -488,12 +488,17 @@ const sections = [
 ];
 
 // ── photo loader (local images/ folder, SVG fallback) ────────
+// To register real images later, populate a window-scoped manifest:
+//   window.FOOD_IMAGE_MANIFEST = new Set(['YS01', 'YS02', ...]);
+// FoodImage only attempts <img> for codes in the manifest, avoiding 404s
+// in the console for items that don't have a real photo yet.
 function FoodImage({ code, fallback }) {
+  const manifest = window.FOOD_IMAGE_MANIFEST;
+  const hasPhoto = !!(code && manifest && manifest.has && manifest.has(code));
+  if (!hasPhoto) return fallback;
   const [errored, setErrored] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  if (errored || !code) return fallback;
-  // Convention: drop product photos in images/<CODE>.jpg|png
-  // The component tries .jpg first; swap the extension or add fallbacks here if needed.
+  if (errored) return fallback;
   const url = `images/${code}.jpg`;
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
