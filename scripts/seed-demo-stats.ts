@@ -96,6 +96,50 @@ for (let i = 0; i < TICKETS; i++) {
 }
 console.log(`[seed] tickets inserted: ${TICKETS}`);
 
+// ─── POS: Sarah's historical orders (so "my last order" works) ──
+// Stable order IDs → INSERT OR IGNORE → idempotent across re-runs.
+const sarahMenu = pos
+  .prepare(`SELECT sku, price_cents, name FROM menu_item WHERE is_available = 1 LIMIT 30`)
+  .all() as Array<{ sku: string; price_cents: number; name: string }>;
+if (sarahMenu.length >= 5) {
+  const insSarahOrder = pos.prepare(
+    `INSERT OR IGNORE INTO "order"
+     (order_id, customer_id, session_id, channel, status,
+      subtotal_cents, tax_cents, discount_cents, total_cents,
+      created_at, updated_at)
+     VALUES (?, 'cust_sarah_001', NULL, 'web', 'delivered',
+             ?, 0, 0, ?,
+             datetime('now', ?), datetime('now', ?))`,
+  );
+  const insSarahLine = pos.prepare(
+    `INSERT OR IGNORE INTO order_line
+     (order_id, menu_item_sku, qty, unit_price_cents, line_total_cents, modifiers_json, notes)
+     VALUES (?, ?, ?, ?, ?, '{}', NULL)`,
+  );
+  const sarahOrders = [
+    { id: "ord_sarah_demo_1", daysAgo: 2,  picks: [[0, 1], [3, 2]] as Array<[number, number]> },
+    { id: "ord_sarah_demo_2", daysAgo: 5,  picks: [[1, 1]] as Array<[number, number]> },
+    { id: "ord_sarah_demo_3", daysAgo: 10, picks: [[2, 2], [4, 1]] as Array<[number, number]> },
+  ];
+  let sarahInserted = 0;
+  for (const o of sarahOrders) {
+    const lines = o.picks.map(([idx, qty]) => {
+      const mi = sarahMenu[idx]!;
+      return { sku: mi.sku, qty, unit: mi.price_cents, total: mi.price_cents * qty };
+    });
+    const total = lines.reduce((s, l) => s + l.total, 0);
+    const off = `-${o.daysAgo} days`;
+    const r = insSarahOrder.run(o.id, total, total, off, off);
+    if (r.changes > 0) {
+      sarahInserted++;
+      for (const l of lines) insSarahLine.run(o.id, l.sku, l.qty, l.unit, l.total);
+    }
+  }
+  console.log(`[seed] Sarah historical orders: +${sarahInserted} (idempotent)`);
+} else {
+  console.log("[seed] skipping Sarah orders — menu not seeded enough");
+}
+
 // ─── POS: mark 4 more menu items as 86'd ────────────────────────
 const ext86 = pos.prepare(
   `UPDATE menu_item SET is_available = 0
