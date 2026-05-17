@@ -266,8 +266,13 @@
   .fm-activity-row:hover { background: #fafaf7; }
   .fm-activity-row:last-child { border-bottom: none; }
   .fm-activity-time { color: #888; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; }
-  .fm-activity-id   { color: #1a1a1a; font-weight: 600; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; }
-  .fm-activity-text { color: #444; }
+  .fm-activity-id   {
+    color: #1a1a1a; font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    min-width: 0;     /* grid item default `auto` lets content overflow — reset to 0 so ellipsis kicks in */
+  }
+  .fm-activity-text { color: #444; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* Status badges */
   .fm-activity-status {

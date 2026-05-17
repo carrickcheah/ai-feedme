@@ -90,22 +90,26 @@ adminApp.get("/inventory-stats", (c) => {
        ORDER BY pct ASC LIMIT 4`,
     );
 
+    // Truncate IDs to keep them inside the 110px ID column (kitchen endpoint
+    // does the same with ticket IDs). Full ID stays in the DB; only display
+    // form is shortened.
+    const shortId = (id: string) => (id.length > 12 ? id.slice(0, 12) : id);
     const activity = [
       ...belowParRows.map((r) => ({
         time: "now",
-        id: r.id,
+        id: shortId(r.id),
         text: `${r.name}: ${r.pct}% of par`,
         status: "STOCK.LOW",
       })),
       ...reorders.map((r) => ({
         time: r.ts ? new Date(r.ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "—",
-        id: r.id,
+        id: shortId(r.id),
         text: r.supplier ? `via ${r.supplier}` : "supplier order placed",
         status: "REORDER",
       })),
       ...consumed.slice(0, 3).map((r) => ({
         time: r.ts ? new Date(r.ts).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "—",
-        id: r.id,
+        id: shortId(r.id),
         text: `${r.ingredient}: -${r.qty}`,
         status: "CONSUMED",
       })),
