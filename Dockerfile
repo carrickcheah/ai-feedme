@@ -7,7 +7,9 @@ WORKDIR /app
 # ----- Dependencies -----
 FROM base AS deps
 COPY package.json bun.lock* ./
-RUN bun install --frozen-lockfile --production
+# Include devDeps — runtime needs `concurrently` (devDep) for `bun run mcp:all`.
+# Image stays small; concurrently + TS types are <5 MB.
+RUN bun install --frozen-lockfile
 
 # ----- Builder -----
 FROM base AS builder
