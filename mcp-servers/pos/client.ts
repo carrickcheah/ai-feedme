@@ -213,6 +213,82 @@ interface OrderRow {
   updated_at: string;
 }
 
+export interface RecentOrder {
+  order_id: string;
+  status: string;
+  channel: string;
+  total_cents: number;
+  created_at: string;
+  items_summary: string;
+}
+
+export function listRecentOrders(opts: {
+  customer_id?: string | null;
+  session_id?: string | null;
+  limit?: number;
+}): RecentOrder[] {
+  if (!opts.customer_id && !opts.session_id) return [];
+  const db = getDb();
+  const limit = Math.min(Math.max(opts.limit ?? 5, 1), 50);
+
+  const where: string[] = [];
+  const params: unknown[] = [];
+  if (opts.customer_id) {
+    where.push(`customer_id = ?`);
+    params.push(opts.customer_id);
+  }
+  if (opts.session_id) {
+    where.push(`session_id = ?`);
+    params.push(opts.session_id);
+  }
+  params.push(limit);
+
+  const orderRows = db
+    .prepare(
+      `SELECT order_id, channel, status, total_cents, created_at
+       FROM "order"
+       WHERE ${where.join(" OR ")}
+       ORDER BY created_at DESC
+       LIMIT ?`,
+    )
+    .all(...(params as never[])) as Array<{
+      order_id: string;
+      channel: string;
+      status: string;
+      total_cents: number;
+      created_at: string;
+    }>;
+  if (!orderRows.length) return [];
+
+  const ids = orderRows.map((r) => r.order_id);
+  const placeholders = ids.map(() => "?").join(",");
+  const lineRows = db
+    .prepare(
+      `SELECT ol.order_id, ol.qty, COALESCE(mi.name, ol.menu_item_sku) AS name
+       FROM order_line ol
+       LEFT JOIN menu_item mi ON mi.sku = ol.menu_item_sku
+       WHERE ol.order_id IN (${placeholders})`,
+    )
+    .all(...(ids as never[])) as Array<{ order_id: string; qty: number; name: string }>;
+
+  const linesByOrder = new Map<string, Array<{ qty: number; name: string }>>();
+  for (const l of lineRows) {
+    const arr = linesByOrder.get(l.order_id) ?? [];
+    arr.push({ qty: l.qty, name: l.name });
+    linesByOrder.set(l.order_id, arr);
+  }
+
+  return orderRows.map((r) => ({
+    order_id: r.order_id,
+    status: r.status,
+    channel: r.channel,
+    total_cents: r.total_cents,
+    created_at: r.created_at,
+    items_summary:
+      (linesByOrder.get(r.order_id) ?? []).map((l) => `${l.qty}× ${l.name}`).join(", ") || "(empty)",
+  }));
+}
+
 export function getOrderById(order_id: string): { order: Order; lines: OrderLine[] } | null {
   const db = getDb();
   const order = db.prepare(`SELECT * FROM "order" WHERE order_id = ?`).get(order_id) as OrderRow | undefined;

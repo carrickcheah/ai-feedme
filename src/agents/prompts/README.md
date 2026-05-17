@@ -15,7 +15,7 @@ System prompts for the three agents, externalized from code so you can edit them
 
 | Prompt | Variables it uses |
 |---|---|
-| customer-facing | `restaurant_name`, `channel`, `session_id` |
+| customer-facing | `restaurant_name`, `channel`, `session_id`, `customer_id` |
 | kitchen | `restaurant_name` |
 | inventory | `restaurant_name` |
 

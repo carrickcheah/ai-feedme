@@ -40,11 +40,12 @@ export interface ChatResponse {
 const sessions = new Map<string, ChatMessage[]>();
 const MAX_HISTORY = 20;
 
-function buildSystemPrompt(channel: string, session_id: string): string {
+function buildSystemPrompt(channel: string, session_id: string, customer_id: string | null): string {
   return loadPrompt("customer-facing", {
     restaurant_name: env.RESTAURANT_NAME,
     channel,
     session_id,
+    customer_id: customer_id ?? "null",
   });
 }
 
@@ -142,7 +143,7 @@ async function processChatMessageInner(
 
   const result = await runAgent({
     agent: "customer-facing",
-    systemPrompt: buildSystemPrompt(req.channel, session_id),
+    systemPrompt: buildSystemPrompt(req.channel, session_id, req.customer_id ?? null),
     userMessage: req.message,
     allowedMcpServers: ["pos", "payment"],
     sessionId: session_id,

@@ -56,6 +56,29 @@ export const toolDefinitions: ToolDefinition[] = [
     },
   },
   {
+    name: "list_recent_orders",
+    description:
+      "List the customer's recent orders WITHOUT needing an order_id. " +
+      "Use this whenever the customer asks about 'my last order', 'recent orders', 'what did I order', etc. " +
+      "Pass at least one of customer_id (preferred — spans across sessions) or session_id (this chat session). " +
+      "Returns the most-recent orders ordered newest-first, each with order_id, status, total_display, created_at, and items_summary.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        customer_id: {
+          type: ["string", "null"],
+          description: "Customer ID if known (e.g. 'cust_sarah_001'). Best match for VIP/known customers.",
+        },
+        session_id: {
+          type: ["string", "null"],
+          description: "Current chat session id — finds orders placed within this session.",
+        },
+        limit: { type: "number", description: "Max orders to return (1-50, default 5)." },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "create_order",
     description:
       "Place an order. Validates every SKU exists and is available; rejects with a clear error if not. " +
@@ -170,6 +193,35 @@ const handlers: Record<string, ToolHandler> = {
         unit_price_display: `RM${(l.unit_price_cents / 100).toFixed(2)}`,
         line_total_display: `RM${(l.line_total_cents / 100).toFixed(2)}`,
       })),
+    });
+  },
+
+  list_recent_orders: async (args) => {
+    const customer_id = optionalString(args, "customer_id") ?? null;
+    const session_id = optionalString(args, "session_id") ?? null;
+    const limit = typeof args.limit === "number" ? args.limit : undefined;
+    if (!customer_id && !session_id) {
+      return formatErrorResult("Provide at least one of customer_id or session_id.");
+    }
+    const orders = pos.listRecentOrders({ customer_id, session_id, limit });
+    if (!orders.length) {
+      return formatJsonResult({
+        orders: [],
+        message: customer_id
+          ? `No prior orders found for ${customer_id}.`
+          : "No orders found in this session yet.",
+      });
+    }
+    return formatJsonResult({
+      orders: orders.map((o) => ({
+        order_id: o.order_id,
+        status: o.status,
+        channel: o.channel,
+        created_at: o.created_at,
+        total_display: `RM${(o.total_cents / 100).toFixed(2)}`,
+        items_summary: o.items_summary,
+      })),
+      count: orders.length,
     });
   },
 
