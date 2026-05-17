@@ -17,6 +17,7 @@ import { logger as honoLogger } from "hono/logger";
 import { env } from "./config/env";
 import { logger as log } from "./lib/logger";
 import { chatApp } from "./api/chat";
+import { adminApp } from "./api/admin";
 
 const app = new Hono();
 
@@ -66,6 +67,7 @@ app.get("/", (c) =>
 
 // ── mount /api/* routes ─────────────────────────────────────
 app.route("/api", chatApp);
+app.route("/api/admin", adminApp);
 
 // ── event system (Kafka consumers + producer) ─────────────────
 // Starts in background — boot continues whether Kafka is up or not.

@@ -289,13 +289,47 @@ function ActivityFeed({ title, rows }) {
   );
 }
 
-function DashboardPage({ agent, tagline, kpis, chart, activity, agentLabel, status }) {
+const ADMIN_API_BASE =
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? "http://localhost:8002/api/admin"
+    : "/api/admin";
+
+/**
+ * DashboardPage now accepts a `statsUrl` to fetch live data from. The
+ * static props (agent, tagline, agentLabel) come from the parent; KPIs,
+ * chart, activity, and status are server-fed and refresh every 30s.
+ */
+function DashboardPage({ agent, tagline, agentLabel, statsUrl, initial }) {
+  const [data, setData] = usePageState(initial || {});
+  const [loading, setLoading] = usePageState(true);
+  const [error, setError] = usePageState(null);
+
+  const load = () => {
+    if (!statsUrl) return;
+    fetch(ADMIN_API_BASE + statsUrl)
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error("HTTP " + r.status)))
+      .then((d) => { setData(d); setError(null); setLoading(false); })
+      .catch((e) => { setError(e.message); setLoading(false); });
+  };
+
+  usePageEffect(() => {
+    load();
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, [statsUrl]);
+
+  const kpis = data.kpis || initial?.kpis || [];
+  const chart = data.chart || initial?.chart;
+  const activity = data.activity || initial?.activity || [];
+  const status = data.status || initial?.status;
+
   return (
     <div className="fm-dashboard">
       <div className="fm-dash-head">
         <div className="fm-dash-head-text">
           <h1 className="fm-dash-title">{agent}</h1>
           <div className="fm-dash-tagline">{tagline}</div>
+          {error && <div className="fm-dash-error">live data unavailable: {error} — showing seed values</div>}
         </div>
         {status && (
           <div className="fm-dash-status">
@@ -310,7 +344,7 @@ function DashboardPage({ agent, tagline, kpis, chart, activity, agentLabel, stat
       <div className="fm-kpi-grid">
         {kpis.map((k, i) => <KPI key={i} {...k} />)}
       </div>
-      <BarChart {...chart} />
+      {chart && <BarChart {...chart} />}
       <ActivityFeed title="Recent activity" rows={activity} />
       <DashboardChatBar agentLabel={agentLabel} />
     </div>
@@ -371,8 +405,24 @@ const INVENTORY_DATA = {
   ],
 };
 
-function KitchenAgentPage()   { return <DashboardPage {...KITCHEN_DATA} />; }
-function InventoryAgentPage() { return <DashboardPage {...INVENTORY_DATA} />; }
+function KitchenAgentPage() {
+  return <DashboardPage
+    agent={KITCHEN_DATA.agent}
+    agentLabel={KITCHEN_DATA.agentLabel}
+    tagline={KITCHEN_DATA.tagline}
+    statsUrl="/kitchen-stats"
+    initial={KITCHEN_DATA}
+  />;
+}
+function InventoryAgentPage() {
+  return <DashboardPage
+    agent={INVENTORY_DATA.agent}
+    agentLabel={INVENTORY_DATA.agentLabel}
+    tagline={INVENTORY_DATA.tagline}
+    statsUrl="/inventory-stats"
+    initial={INVENTORY_DATA}
+  />;
+}
 
 // ─── Placeholder for items without a backing doc ────────────────
 function ComingSoonPage({ what }) {
