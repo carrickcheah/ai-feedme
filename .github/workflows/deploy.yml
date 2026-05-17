@@ -1,61 +1,53 @@
-name: Deploy to ai-kiss-me
+name: Deploy
+
+# Runs on the self-hosted runner that lives on ai-kiss-me. No SSH needed —
+# the runner IS the deploy target. Triggered on push to main or manually.
 
 on:
   push:
     branches: [main]
     paths-ignore:
-      - 'docs/**'           # doc-only edits don't need a deploy
+      - 'docs/**'
       - '**/*.md'
       - '.gitignore'
-  workflow_dispatch:        # allow manual trigger from GitHub UI
+  workflow_dispatch:
 
 concurrency:
   group: deploy-ai-kiss-me
-  cancel-in-progress: false  # don't kill an in-flight deploy with a newer commit
+  cancel-in-progress: false
 
 env:
-  VM_HOST: 4.193.106.142
-  VM_USER: feedme
   PUBLIC_URL: https://feedm.carrickcheah.com
 
 jobs:
   deploy:
-    name: SSH + docker compose up
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, feedme-vm]
     timeout-minutes: 15
-
     steps:
-      - name: Load deploy SSH key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.AI_KISS_ME_DEPLOY_KEY }}
+      - name: Pull + rebuild + restart
+        run: bash ~/ai-feedme/deploy/deploy.sh
 
-      - name: Trust the VM host key
-        run: ssh-keyscan -H "$VM_HOST" >> ~/.ssh/known_hosts
-
-      - name: Deploy via remote script
-        run: |
-          ssh -o ServerAliveInterval=30 "$VM_USER@$VM_HOST" 'bash ~/ai-feedme/deploy/deploy.sh'
-
-      - name: Wait for app to recover
+      - name: Wait for app to settle
         run: sleep 10
 
       - name: Public health check
+        env:
+          URL: ${{ env.PUBLIC_URL }}
         run: |
           curl -fsS --retry 6 --retry-delay 5 --retry-all-errors \
-            "$PUBLIC_URL/health" \
-            | tee /dev/stderr | grep -q '"status":"ok"'
+            "$URL/health" | tee /dev/stderr | grep -q '"status":"ok"'
 
       - name: Summary
         if: always()
         env:
           COMMIT_SHA: ${{ github.sha }}
           JOB_STATUS: ${{ job.status }}
+          URL: ${{ env.PUBLIC_URL }}
         run: |
           {
             echo "### Deploy result"
             echo ""
-            echo "- target: $PUBLIC_URL"
+            echo "- target: $URL"
             echo "- commit: $COMMIT_SHA"
             echo "- status: $JOB_STATUS"
           } >> "$GITHUB_STEP_SUMMARY"
