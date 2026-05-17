@@ -21,6 +21,7 @@ FROM base AS runtime
 ENV NODE_ENV=production
 ENV PORT=8002
 COPY --from=deps /app/node_modules ./node_modules
+COPY package.json bun.lock* ./
 COPY src ./src
 COPY mcp-servers ./mcp-servers
 COPY tsconfig.json bunfig.toml ./
