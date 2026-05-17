@@ -10,7 +10,7 @@
 # Note: /api/chat is SSE (Server-Sent Events). reverse_proxy handles streaming
 # natively — no extra config needed. Caddy disables buffering for SSE.
 
-feedme.carrickcheah.com {
+feedm.carrickcheah.com {
   # Strong defaults
   encode gzip zstd
 

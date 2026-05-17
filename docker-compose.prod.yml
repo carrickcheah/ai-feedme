@@ -50,7 +50,7 @@ services:
       MCP_SUPPLIER_URL: http://mcp:4014/mcp
       MEMGC_URL: http://memgc:8003
       REDIS_URL: redis://redis:6379
-      CORS_ALLOWED_ORIGINS: "https://feedme.carrickcheah.com"
+      CORS_ALLOWED_ORIGINS: "https://feedm.carrickcheah.com"
       NODE_ENV: production
     volumes:
       - feedme_data:/app/data

@@ -5,8 +5,8 @@ Production deployment of FeedMe to a single Azure VM behind Caddy + auto-SSL.
 ## Target
 
 - VM: **ai-kiss-me** (`4.193.106.142`, Singapore, Ubuntu 24.04, 8 vCPU / 32 GB)
-- Public URL: **https://feedme.carrickcheah.com**
-- DNS: Cloudflare A record `feedme.carrickcheah.com → 4.193.106.142` (proxy OFF — Caddy needs direct ACME challenge)
+- Public URL: **https://feedm.carrickcheah.com**
+- DNS: Cloudflare A record `feedm.carrickcheah.com → 4.193.106.142` (proxy OFF — Caddy needs direct ACME challenge)
 
 ## What runs in production
 
@@ -72,7 +72,7 @@ bash deploy/deploy.sh
 
 Wait ~60s for first build + SSL cert provisioning. Then:
 ```bash
-curl -fsS https://feedme.carrickcheah.com/api/health
+curl -fsS https://feedm.carrickcheah.com/api/health
 # {"status":"ok","service":"feedme-app",...}
 ```
 
@@ -106,7 +106,7 @@ cat ~/.ssh/feedme_deploy   # paste this into the GitHub Secret AI_KISS_ME_DEPLOY
 4. SSHs to `feedme@4.193.106.142`
 5. Runs `bash ~/ai-feedme/deploy/deploy.sh`
 6. `deploy.sh` does: `git reset --hard origin/main` + `docker compose up -d --build --remove-orphans`
-7. Health check via `curl https://feedme.carrickcheah.com/api/health`
+7. Health check via `curl https://feedm.carrickcheah.com/api/health`
 8. Pass → green ✓ in GitHub; Fail → red ✗ + you SSH in to inspect
 
 Total deploy time: ~30–90s (mostly Bun image rebuild when src/ changes).
@@ -134,7 +134,7 @@ Strategies to save credits when not demoing:
 
 ## Troubleshooting
 
-**SSL cert won't issue.** Check Caddy logs: `docker compose logs caddy`. Common causes: Cloudflare proxy is ON (turn OFF), DNS hasn't propagated (`dig feedme.carrickcheah.com` — should return the VM IP), port 80 blocked at NSG (we opened it; recheck `az vm open-port`).
+**SSL cert won't issue.** Check Caddy logs: `docker compose logs caddy`. Common causes: Cloudflare proxy is ON (turn OFF), DNS hasn't propagated (`dig feedm.carrickcheah.com` — should return the VM IP), port 80 blocked at NSG (we opened it; recheck `az vm open-port`).
 
 **`docker compose up` fails on memgc build.** The build context is `../` so the parent directory must contain `memgc/memgc-py/`. On the VM, the repo is at `~/ai-feedme` so `../` is `~/`. Clone memgc to `~/memgc` if you want memgc-service to build there; otherwise comment out the `memgc` service and the app falls back to no-memory mode gracefully.
 

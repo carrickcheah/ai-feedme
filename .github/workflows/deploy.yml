@@ -16,7 +16,7 @@ concurrency:
 env:
   VM_HOST: 4.193.106.142
   VM_USER: feedme
-  PUBLIC_URL: https://feedme.carrickcheah.com
+  PUBLIC_URL: https://feedm.carrickcheah.com
 
 jobs:
   deploy:
