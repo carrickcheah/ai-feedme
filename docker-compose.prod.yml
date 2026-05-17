@@ -61,7 +61,12 @@ services:
     networks: [feedme]
 
   # ── 4 MCP servers in one container (concurrently runs all 4) ─
+  # Same Dockerfile as `app` — compose dedups identical builds. No depends_on
+  # to avoid a cycle (app already depends on mcp via condition: service_started).
   mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: feedme/bun:latest
     restart: unless-stopped
     command: bun run mcp:all
@@ -70,8 +75,14 @@ services:
       NODE_ENV: production
     volumes:
       - feedme_data:/app/data      # shared SQLite volume with app
-    depends_on:
-      - app  # only to share image (app builds it). mcp runs independently.
+    # Override the Dockerfile's default healthcheck (which probes :8002) since
+    # this container runs MCP servers on :4001-4014 instead.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:4001/health && wget -q --spider http://localhost:4014/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks: [feedme]
 
   # ── MemGC Python sidecar ────────────────────────────────────
