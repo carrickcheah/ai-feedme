@@ -25,6 +25,16 @@ feedm.carrickcheah.com {
     }
   }
 
+  # Top-level /health → main app (app exposes /health, not /api/health).
+  # /ready follows same pattern. Without this, Caddy routes /health to the
+  # static handler and returns the frontend index.html (200 but wrong body).
+  handle /health {
+    reverse_proxy app:8002
+  }
+  handle /ready {
+    reverse_proxy app:8002
+  }
+
   # Static frontend
   handle {
     root * /srv/snow-dessert
