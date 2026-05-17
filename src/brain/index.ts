@@ -6,6 +6,7 @@
  */
 export {
   chat,
+  chatStream,
   type ChatMessage,
   type ChatResult,
   type ChatOptions,

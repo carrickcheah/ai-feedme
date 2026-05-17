@@ -165,12 +165,17 @@ function ChatPanel({ open, onClose }) {
     if (!text || loading) return;
     setInput("");
     setMessages((m) => [...m, { role: "user", text }]);
+    // Insert empty assistant message that gets filled by streaming deltas.
+    setMessages((m) => [...m, { role: "assistant", text: "", streaming: true, tools: [] }]);
     setLoading(true);
 
+    // Switch from /chat/sync to /chat (SSE). Same payload, streamed response.
+    const STREAM_URL = CHAT_API_URL.replace(/\/sync$/, "");
+
     try {
-      const res = await fetch(CHAT_API_URL, {
+      const res = await fetch(STREAM_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
         body: JSON.stringify({
           message: text,
           session_id: sessionId,
@@ -179,11 +184,11 @@ function ChatPanel({ open, onClose }) {
         }),
       });
 
-      if (!res.ok) {
-        const errBody = await res.text();
-        setMessages((m) => [
-          ...m,
-          {
+      if (!res.ok || !res.body) {
+        const errBody = await res.text().catch(() => "");
+        setMessages((m) => {
+          const next = [...m];
+          next[next.length - 1] = {
             role: "assistant",
             error: true,
             text:
@@ -192,37 +197,95 @@ function ChatPanel({ open, onClose }) {
               "). " +
               "Make sure the backend is running: " +
               "`cd ai-feedme && make up && make dev`",
-          },
-        ]);
+          };
+          return next;
+        });
         return;
       }
 
-      const data = await res.json();
-      if (data.session_id) {
-        setSessionId(data.session_id);
-        window.localStorage.setItem("iceyoo_session_id", data.session_id);
+      // Read SSE stream: event lines like `event: chunk` followed by `data: {...}`.
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let currentEvent = "chunk";
+      let finalData = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+        for (const part of parts) {
+          const lines = part.split("\n");
+          for (const line of lines) {
+            if (line.startsWith("event:")) currentEvent = line.slice(6).trim();
+            else if (line.startsWith("data:")) {
+              const raw = line.slice(5).trim();
+              if (!raw) continue;
+              try {
+                const data = JSON.parse(raw);
+                if (currentEvent === "chunk" && data.delta) {
+                  setMessages((m) => {
+                    const next = [...m];
+                    const last = next[next.length - 1];
+                    next[next.length - 1] = { ...last, text: (last.text || "") + data.delta };
+                    return next;
+                  });
+                } else if (currentEvent === "done") {
+                  finalData = data;
+                } else if (currentEvent === "error") {
+                  setMessages((m) => {
+                    const next = [...m];
+                    next[next.length - 1] = {
+                      role: "assistant",
+                      error: true,
+                      text: "Agent error: " + (data.message || data.error || "unknown"),
+                    };
+                    return next;
+                  });
+                }
+              } catch (e) {
+                // ignore malformed SSE chunk
+              }
+            }
+          }
+        }
       }
-      setMessages((m) => [
-        ...m,
-        {
-          role: "assistant",
-          text: data.output || "(empty response)",
-          tools: data.tools_called || [],
-        },
-      ]);
+
+      // Finalize: persist session id + tools metadata on the streamed message.
+      if (finalData) {
+        if (finalData.session_id) {
+          setSessionId(finalData.session_id);
+          window.localStorage.setItem("iceyoo_session_id", finalData.session_id);
+        }
+        setMessages((m) => {
+          const next = [...m];
+          const last = next[next.length - 1];
+          next[next.length - 1] = {
+            ...last,
+            streaming: false,
+            // If no chunks arrived (very short reply lost?), fall back to final output.
+            text: last.text || finalData.output || "(empty response)",
+            tools: finalData.tools_called || [],
+          };
+          return next;
+        });
+      }
     } catch (err) {
-      setMessages((m) => [
-        ...m,
-        {
+      setMessages((m) => {
+        const next = [...m];
+        next[next.length - 1] = {
           role: "assistant",
           error: true,
           text:
             "Network error — couldn't reach the assistant at " +
-            CHAT_API_URL +
+            STREAM_URL +
             ". " +
             "Phase 1 ships this API; if it's not running yet, this is expected.",
-        },
-      ]);
+        };
+        return next;
+      });
     } finally {
       setLoading(false);
     }

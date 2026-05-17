@@ -73,6 +73,114 @@ export interface ChatOptions {
   abortSignal?: AbortSignal;
 }
 
+/**
+ * Streaming variant of chat(). Invokes `onContentChunk(delta)` for each text
+ * delta as it arrives. Tool calls stream in as fragments — accumulated by
+ * function index and only surfaced in the returned ChatResult at the end
+ * (the loop in runAgent only needs the final assembled tool_calls).
+ *
+ * Returns the same shape as chat() once the stream completes.
+ */
+export async function chatStream(
+  options: ChatOptions,
+  onContentChunk: (delta: string) => void,
+): Promise<ChatResult> {
+  const cfg = agentConfig(options.agent);
+  const start = Date.now();
+
+  const requestBody = {
+    model: cfg.model,
+    messages: options.messages,
+    max_completion_tokens: options.maxCompletionTokens ?? 2048,
+    stream: true,
+    stream_options: { include_usage: true },
+    ...(options.tools && options.tools.length > 0
+      ? { tools: options.tools, tool_choice: options.toolChoice ?? "auto" }
+      : {}),
+    ...(cfg.reasoning !== "none" ? { reasoning_effort: cfg.reasoning } : {}),
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stream = (await client.chat.completions.create(requestBody as any, {
+    signal: options.abortSignal,
+  })) as unknown as AsyncIterable<{
+    choices?: Array<{
+      delta?: {
+        content?: string;
+        tool_calls?: Array<{
+          index?: number;
+          id?: string;
+          function?: { name?: string; arguments?: string };
+        }>;
+      };
+      finish_reason?: string;
+    }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; completion_tokens_details?: { reasoning_tokens?: number } };
+  }>;
+
+  let content = "";
+  const toolCallsByIndex = new Map<number, { id: string; name: string; args: string }>();
+  let finish_reason = "unknown";
+  let usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number; completion_tokens_details?: { reasoning_tokens?: number } } | undefined;
+
+  for await (const chunk of stream) {
+    const choice = chunk.choices?.[0];
+    const delta = choice?.delta ?? {};
+    if (delta.content) {
+      content += delta.content;
+      onContentChunk(delta.content);
+    }
+    if (delta.tool_calls) {
+      for (const tc of delta.tool_calls) {
+        const idx = tc.index ?? 0;
+        const existing = toolCallsByIndex.get(idx) ?? { id: "", name: "", args: "" };
+        if (tc.id) existing.id = tc.id;
+        if (tc.function?.name) existing.name = tc.function.name;
+        if (tc.function?.arguments) existing.args += tc.function.arguments;
+        toolCallsByIndex.set(idx, existing);
+      }
+    }
+    if (choice?.finish_reason) finish_reason = choice.finish_reason;
+    if (chunk.usage) usage = chunk.usage;
+  }
+
+  const tool_calls: ChatToolCall[] = [...toolCallsByIndex.values()].map((tc) => ({
+    id: tc.id,
+    type: "function",
+    function: { name: tc.name, arguments: tc.args },
+  }));
+
+  const duration = Date.now() - start;
+  logger.info(
+    {
+      agent: options.agent,
+      model: cfg.model,
+      duration_ms: duration,
+      input_tokens: usage?.prompt_tokens ?? 0,
+      output_tokens: usage?.completion_tokens ?? 0,
+      tool_calls: tool_calls.length,
+      finish_reason,
+      streamed: true,
+      output_preview: content.slice(0, 100),
+    },
+    "[BRAIN] Azure GPT-5.5 stream done",
+  );
+
+  return {
+    output: content,
+    tool_calls,
+    finish_reason,
+    model: cfg.model,
+    usage: {
+      input_tokens: usage?.prompt_tokens ?? 0,
+      output_tokens: usage?.completion_tokens ?? 0,
+      reasoning_tokens: usage?.completion_tokens_details?.reasoning_tokens ?? 0,
+      total_tokens: usage?.total_tokens ?? 0,
+    },
+    duration_ms: duration,
+  };
+}
+
 export async function chat(options: ChatOptions): Promise<ChatResult> {
   const cfg = agentConfig(options.agent);
   const start = Date.now();

@@ -113,7 +113,26 @@ async function fetchLatestOrderForSession(session_id: string): Promise<OrderCrea
   }
 }
 
+/**
+ * Streaming variant of processChatMessage. Same logic, but pipes each content
+ * chunk through `onContentChunk` as the LLM emits it. The returned ChatResponse
+ * still carries the full assembled output + tools_called + metadata at the end.
+ */
+export async function processChatMessageStreaming(
+  req: ChatRequest,
+  onContentChunk: (delta: string) => void,
+): Promise<ChatResponse> {
+  return processChatMessageInner(req, onContentChunk);
+}
+
 export async function processChatMessage(req: ChatRequest): Promise<ChatResponse> {
+  return processChatMessageInner(req);
+}
+
+async function processChatMessageInner(
+  req: ChatRequest,
+  onContentChunk?: (delta: string) => void,
+): Promise<ChatResponse> {
   const session_id = req.session_id ?? `sess_${ulid()}`;
   const history = sessions.get(session_id) ?? [];
 
@@ -150,6 +169,7 @@ export async function processChatMessage(req: ChatRequest): Promise<ChatResponse
     history,
     maxCompletionTokens: 1024,
     memoryContext,
+    onContentChunk,
   });
 
   // Update session history (drop tool-churn turns; keep only user + final assistant)

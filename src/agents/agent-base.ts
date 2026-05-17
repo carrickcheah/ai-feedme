@@ -12,7 +12,7 @@
  * Phase 3 will add memory hooks (MemGC) + skills loading.
  */
 import { ulid } from "ulid";
-import { chat, listTools, callTool, toOpenAITools, parsePrefixed } from "../brain";
+import { chat, chatStream, listTools, callTool, toOpenAITools, parsePrefixed } from "../brain";
 import type { ChatMessage, ChatTool, ChatToolCall, McpServerName } from "../brain";
 import { logger } from "../lib/logger";
 import { traced, addSpanAttrs } from "../lib/tracing";
@@ -52,6 +52,13 @@ export interface AgentRunOptions {
    * Loaded by callers (eg customer-facing.ts) via memgcAnswer() before invoking runAgent.
    */
   memoryContext?: string;
+  /**
+   * Optional callback for streaming content deltas. When provided, runAgent
+   * uses chatStream() on every LLM call. Tool-call turns yield no content
+   * (callback never fires); the final answer-turn streams text token-by-token
+   * to this callback as the LLM emits it.
+   */
+  onContentChunk?: (delta: string) => void;
 }
 
 const DEFAULT_MAX_AGENT_TURNS = 5;
@@ -168,13 +175,16 @@ async function runAgentInner(options: AgentRunOptions, session_id: string): Prom
 
   try {
     for (let turn = 0; turn < maxTurns; turn++) {
-      const result = await chat({
+      const chatArgs = {
         agent: options.agent,
         messages: stack,
         tools: tools.length > 0 ? tools : undefined,
         maxCompletionTokens: maxTokens,
         abortSignal: options.abortSignal,
-      });
+      };
+      const result = options.onContentChunk
+        ? await chatStream(chatArgs, options.onContentChunk)
+        : await chat(chatArgs);
       totals.input += result.usage.input_tokens;
       totals.output += result.usage.output_tokens;
       totals.reasoning += result.usage.reasoning_tokens;
