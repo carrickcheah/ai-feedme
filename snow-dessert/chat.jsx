@@ -139,9 +139,11 @@ function ChatPanel({ open, onClose }) {
   // ── VIP demo toggle ────────────────────────────────────────
   // When ON, sends customer_id: "cust_sarah_001" so the agent loads
   // her profile from MemGC (after running scripts/seed-memgc-sarah.ts).
-  const [isVip, setIsVip] = useState(
-    () => window.localStorage.getItem("iceyoo_is_vip") === "1"
-  );
+  // Defaults to ON so the demo opens with Sarah's profile pre-loaded.
+  const [isVip, setIsVip] = useState(() => {
+    const v = window.localStorage.getItem("iceyoo_is_vip");
+    return v === null ? true : v === "1";
+  });
   const customerId = isVip ? "cust_sarah_001" : null;
   const scrollerRef = useRef(null);
   const inputRef = useRef(null);
