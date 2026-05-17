@@ -26,6 +26,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json bun.lock* ./
 COPY src ./src
 COPY mcp-servers ./mcp-servers
+COPY scripts ./scripts
 COPY tsconfig.json bunfig.toml ./
 
 EXPOSE 8002
