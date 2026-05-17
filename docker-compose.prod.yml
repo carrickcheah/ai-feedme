@@ -1,0 +1,109 @@
+# FeedMe production compose — single VM deployment.
+#
+# Run:  docker compose -f docker-compose.prod.yml up -d --build
+#
+# Services on the internal `feedme` network:
+#   caddy   :80, :443 (host)  → reverse proxy + auto Let's Encrypt SSL
+#   app     :8002 (internal)  → main Bun server (chat API + dashboard stats)
+#   mcp     :4001-4014 (internal) → 4 MCP servers (POS, KDS, Payment, Supplier)
+#   memgc   :8003 (internal)  → Python FastAPI sidecar (PRISM retrieval)
+#   redis   :6379 (internal)  → MemGC answer cache (TTL 300s)
+#
+# Kafka is intentionally NOT included — the in-process fallback handles
+# single-VM event delivery identically from the user's POV.
+#
+# memgc service expects memgc-py source bind-mounted from $HOME/memgc/memgc-py
+# (clone https://github.com/carrickcheah/memgc alongside ai-feedme on the VM).
+
+name: feedme
+
+services:
+  # ── Reverse proxy + SSL ─────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./snow-dessert:/srv/snow-dessert:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks: [feedme]
+
+  # ── Main app (chat API + dashboard stats endpoints) ─────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: feedme/bun:latest
+    restart: unless-stopped
+    command: bun src/index.ts
+    env_file: [.env]
+    environment:
+      MCP_POS_URL: http://mcp:4001/mcp
+      MCP_KITCHEN_DISPLAY_URL: http://mcp:4002/mcp
+      MCP_PAYMENT_URL: http://mcp:4013/mcp
+      MCP_SUPPLIER_URL: http://mcp:4014/mcp
+      MEMGC_URL: http://memgc:8003
+      REDIS_URL: redis://redis:6379
+      CORS_ALLOWED_ORIGINS: "https://feedme.carrickcheah.com"
+      NODE_ENV: production
+    volumes:
+      - feedme_data:/app/data
+    depends_on:
+      mcp:   { condition: service_started }
+      memgc: { condition: service_started }
+      redis: { condition: service_started }
+    networks: [feedme]
+
+  # ── 4 MCP servers in one container (concurrently runs all 4) ─
+  mcp:
+    image: feedme/bun:latest
+    restart: unless-stopped
+    command: bun run mcp:all
+    env_file: [.env]
+    environment:
+      NODE_ENV: production
+    volumes:
+      - feedme_data:/app/data      # shared SQLite volume with app
+    depends_on:
+      - app  # only to share image (app builds it). mcp runs independently.
+    networks: [feedme]
+
+  # ── MemGC Python sidecar ────────────────────────────────────
+  memgc:
+    build:
+      context: ./memgc-service
+      dockerfile: Dockerfile
+    image: feedme/memgc:latest
+    restart: unless-stopped
+    volumes:
+      - ${HOME}/memgc/memgc-py:/memgc-py:ro    # bind-mounted source (matches existing Dockerfile)
+      - memgc_data:/app/data
+    environment:
+      PYTHONPATH: /memgc-py/src
+    networks: [feedme]
+
+  # ── Redis cache (MemGC answer cache, TTL 300s) ──────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks: [feedme]
+
+networks:
+  feedme:
+    driver: bridge
+
+volumes:
+  caddy_data:        # SSL certs persist here
+  caddy_config:
+  feedme_data:       # SQLite files (pos.db, kitchen-display.db, payment.db, supplier.db)
+  memgc_data:        # memgc.db
+  redis_data:

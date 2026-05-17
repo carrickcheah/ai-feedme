@@ -1,0 +1,52 @@
+# Caddy — reverse proxy + auto Let's Encrypt SSL for FeedMe.
+#
+# Caddy fetches the cert automatically via ACME HTTP-01 the first time the
+# domain resolves to this VM. Renewals are automatic (60-day cycle).
+#
+# Routes:
+#   /api/*  → main app container (Bun) on port 8002
+#   /*      → static snow-dessert/ frontend
+#
+# Note: /api/chat is SSE (Server-Sent Events). reverse_proxy handles streaming
+# natively — no extra config needed. Caddy disables buffering for SSE.
+
+feedme.carrickcheah.com {
+  # Strong defaults
+  encode gzip zstd
+
+  # API → main app
+  handle /api/* {
+    reverse_proxy app:8002 {
+      # SSE: no response buffering, longer write timeout
+      flush_interval -1
+      transport http {
+        response_header_timeout 5m
+      }
+    }
+  }
+
+  # Static frontend
+  handle {
+    root * /srv/snow-dessert
+    try_files {path} /index.html
+    file_server
+  }
+
+  # Security headers
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    -Server
+  }
+
+  log {
+    output stdout
+    format console
+    level INFO
+  }
+}
+
+# Optional: redirect bare apex / www to the canonical host
+# (skip if you don't own those records yet)
