@@ -234,20 +234,34 @@ function KPI({ icon, value, label, tone, trend }) {
   );
 }
 
-function BarChart({ title, values, labels }) {
+const CHART_PX = 130;   // max bar height in pixels — keeps bars visible regardless of container layout
+
+function barTone(v, scale) {
+  // For 0–100 scales: <25 = red, 25–50 = amber, >50 = healthy. For other scales,
+  // fall back to "neutral" so the chart stays orange-brand by default.
+  if (!scale || scale !== "percent") return "neutral";
+  if (v < 25) return "low";
+  if (v < 50) return "mid";
+  return "ok";
+}
+
+function BarChart({ title, values, labels, scale }) {
   const max = Math.max(...values, 1);
-  const peakIdx = values.indexOf(max);
   return (
     <div className="fm-card">
       <div className="fm-card-title">{title}</div>
       <div className="fm-chart-bars">
-        {values.map((v, i) => (
-          <div key={i} className={"fm-chart-col" + (i === peakIdx ? " peak" : "")}>
-            {i === peakIdx && <div className="fm-chart-peak">{v}</div>}
-            <div className="fm-chart-bar" style={{ height: (v / max * 100) + "%" }} />
-            <div className="fm-chart-label">{labels[i]}</div>
-          </div>
-        ))}
+        {values.map((v, i) => {
+          const tone = barTone(v, scale);
+          const px = Math.max(4, Math.round((v / max) * CHART_PX));
+          return (
+            <div key={i} className="fm-chart-col">
+              <div className="fm-chart-value">{v}{scale === "percent" ? "%" : ""}</div>
+              <div className={"fm-chart-bar fm-chart-bar-" + tone} style={{ height: px + "px" }} />
+              <div className="fm-chart-label">{labels[i]}</div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -343,8 +357,9 @@ const INVENTORY_DATA = {
   ],
   chart: {
     title: "Stock levels (% of par)",
+    scale: "percent",
     labels: ["Mango","Milk","Oreo","Ice","Cream","Chicken","Sugar","Strawberry","Coffee","Mint"],
-    values: [85, 72, 40, 90, 15, 60, 25, 80, 55, 35],
+    values: [95, 78, 32, 88, 12, 65, 22, 82, 58, 42],
   },
   activity: [
     { time: "14:30", id: "ING-204",  text: "Cream cheese: 0.5kg / 3kg par", status: "STOCK.LOW" },

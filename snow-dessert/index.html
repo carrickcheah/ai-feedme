@@ -219,32 +219,32 @@
     display: flex;
     align-items: flex-end;
     gap: 10px;
-    height: 140px;
-    padding-top: 18px;            /* room for peak label */
+    padding: 18px 0 0;
     border-bottom: 1px solid #f1eee5;
   }
   .fm-chart-col {
     flex: 1;
     display: flex; flex-direction: column; align-items: center;
-    position: relative;
+    min-width: 0;
+  }
+  .fm-chart-value {
+    font-size: 10px; font-weight: 700;
+    color: #555;
+    margin-bottom: 4px;
+    line-height: 1;
   }
   .fm-chart-bar {
     width: 100%;
     background: linear-gradient(180deg, #F08531 0%, #d96a17 100%);
     border-radius: 4px 4px 0 0;
-    min-height: 3px;
-    transition: height 0.3s ease, filter 160ms ease;
+    transition: filter 160ms ease;
   }
   .fm-chart-col:hover .fm-chart-bar { filter: brightness(1.1); }
-  .fm-chart-col.peak .fm-chart-bar {
-    background: linear-gradient(180deg, #ea580c 0%, #c2410c 100%);
-  }
-  .fm-chart-peak {
-    position: absolute; top: -16px;
-    font-size: 11px; font-weight: 700; color: #c2410c;
-    background: #fff7ed;
-    padding: 2px 6px; border-radius: 4px;
-  }
+  /* Tone variants — color-code by stock level (low/mid/ok) */
+  .fm-chart-bar-low { background: linear-gradient(180deg, #dc2626 0%, #991b1b 100%); }
+  .fm-chart-bar-mid { background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%); }
+  .fm-chart-bar-ok  { background: linear-gradient(180deg, #16a34a 0%, #15803d 100%); }
+  .fm-chart-col:hover .fm-chart-value { color: #1a1a1a; }
   .fm-chart-label {
     font-size: 11px;
     color: #888;
