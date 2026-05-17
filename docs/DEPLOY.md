@@ -26,7 +26,7 @@ Production deployment of FeedMe to a single Azure VM behind Caddy + auto-SSL.
 
 Add an A record:
 ```
-Name:  feedme
+Name:  feedm
 Type:  A
 IPv4:  4.193.106.142
 Proxy: OFF (DNS only)
