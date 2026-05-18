@@ -1,5 +1,9 @@
 # FeedMe — Promptfoo Eval Scenarios (30 tests)
 
+![Langfuse trace dashboard — live observability for every agent run](https://raw.githubusercontent.com/carrickcheah/ai-feedme/main/docs/image.png)
+
+> Live Langfuse view of recent runs in this app — every agent invocation lands here with input, output, user, session, and nested tool/MemGC spans.
+
 > The full golden-set test bank for Phase 4. Pair with `PHASES.md §4`.
 > Format: Promptfoo YAML with `vars` + `assert`.
 > Target: ≥27/30 passing (90%).
