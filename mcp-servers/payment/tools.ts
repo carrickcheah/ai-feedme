@@ -33,21 +33,10 @@ export const toolDefinitions: ToolDefinition[] = [
       required: ["intent_id"],
     },
   },
-  {
-    name: "refund",
-    description:
-      "Issue a refund. THIS TOOL IS LOCKED — requires manager approval via HITL flow (Phase 4). " +
-      "Always returns an error in Phase 1 prototype; do not call.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        intent_id: { type: "string" },
-        amount_cents: { type: "number" },
-        reason: { type: "string" },
-      },
-      required: ["intent_id", "amount_cents", "reason"],
-    },
-  },
+  // refund tool is intentionally NOT advertised to the LLM (locked behind HITL).
+  // The handler in `handlers.refund` is kept below so any code path that did wire
+  // it up still gets a clean LOCKED error — but the LLM never sees it as an option,
+  // saving ~70 input tokens per turn and removing a temptation entirely.
   {
     name: "get_payment",
     description: "Look up payment status by intent_id or order_id.",

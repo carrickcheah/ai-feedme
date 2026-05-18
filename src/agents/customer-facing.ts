@@ -136,18 +136,14 @@ async function processChatMessageInner(
   const session_id = req.session_id ?? `sess_${ulid()}`;
   const history = sessions.get(session_id) ?? [];
 
-  // ── Customer profile: load directly from a hardcoded .md per customer_id ──
-  // For the demo we ship known VIP profiles as plain markdown under
-  // src/agents/prompts/customer-profiles/<customer_id>.md so the first turn
-  // is instant. The MemGC sidecar is left in place as the architectural
-  // story (and would be the path for unknown customers in production), but
-  // the demo's headline path does not pay its ~50s PRISM cost.
+  // Customer profile is loaded from a hardcoded .md per customer_id and
+  // injected on EVERY turn (not just the first) — otherwise turn 2+ of a
+  // session loses the profile context and falls back to defensive
+  // pos__search_menu calls. The file read is cached in-process after the
+  // first hit, so this is effectively free.
   let memoryContext: string | undefined;
-  if (req.customer_id && history.length === 0) {
+  if (req.customer_id) {
     memoryContext = loadCustomerProfile(req.customer_id) ?? undefined;
-    if (memoryContext) {
-      logger.info({ customer_id: req.customer_id }, "[AGENT:customer-facing] profile loaded (hardcoded)");
-    }
   }
 
   const result = await runAgent({
