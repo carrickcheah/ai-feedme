@@ -92,6 +92,7 @@ services:
       dockerfile: Dockerfile
     image: feedme/memgc:latest
     restart: unless-stopped
+    env_file: [.env]   # Azure OpenAI keys for extract / answer
     volumes:
       - ${HOME}/memgc/memgc-py:/memgc-py:ro    # bind-mounted source (matches existing Dockerfile)
       - memgc_data:/app/data
