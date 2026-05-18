@@ -61,8 +61,18 @@ const IconSpinner = ({ size = 18 }) => (
 );
 
 // ── chat bubble ───────────────────────────────────────────────
+// Sanitize + render Markdown for assistant bubbles. Sanitizer is DOMPurify
+// (loaded from CDN in index.html alongside marked). DOMPurify strips any
+// HTML the model emits down to a safe subset before injection.
+function renderBubbleMarkdown(md) {
+  if (!window.marked || !window.DOMPurify) return { __html: "" };
+  const html = window.marked.parse(md || "");
+  return { __html: window.DOMPurify.sanitize(html) };
+}
+
 const ChatBubble = ({ role, text, tools, error }) => {
   const isUser = role === "user";
+  const isMd = !isUser && !error;
   return (
     <div
       style={{
@@ -72,6 +82,7 @@ const ChatBubble = ({ role, text, tools, error }) => {
       }}
     >
       <div
+        className={isMd ? "fm-md" : undefined}
         style={{
           maxWidth: "78%",
           padding: "10px 14px",
@@ -82,12 +93,17 @@ const ChatBubble = ({ role, text, tools, error }) => {
           color: error ? "#a02020" : isUser ? "#fff" : "#111",
           fontSize: 15,
           lineHeight: 1.4,
-          whiteSpace: "pre-wrap",
+          whiteSpace: isMd ? "normal" : "pre-wrap",
           wordBreak: "break-word",
           border: error ? "1px solid #f5b5b0" : "none",
         }}
       >
-        {text}
+        {isMd ? (
+          // eslint-disable-next-line react/no-danger -- sanitized via DOMPurify in renderBubbleMarkdown
+          <span dangerouslySetInnerHTML={renderBubbleMarkdown(text || "")} />
+        ) : (
+          text
+        )}
         {tools && tools.length > 0 && (
           <div
             style={{
