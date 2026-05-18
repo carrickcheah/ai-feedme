@@ -1,8 +1,10 @@
 # Guide
 
+<img src="https://raw.githubusercontent.com/carrickcheah/ai-feedme/main/docs/startbubble.png" alt="Click the AI Assistant bubble to start" width="380" />
+
 A short tour of what FeedMe is, what it can do, and how it's put together.
 
-**Live demo:** [feedm.carrickcheah.com](https://feedm.carrickcheah.com/) — open the kiosk on the left, click the chat bubble.
+**Live demo:** [feedm.carrickcheah.com](https://feedm.carrickcheah.com/) — open the kiosk on the left, click the AI Assistant bubble.
 
 ---
 
