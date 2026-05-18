@@ -40,6 +40,8 @@ export interface AgentRunOptions {
   allowedMcpServers: McpServerName[];
   /** Optional session id; defaults to a fresh ULID. */
   sessionId?: string;
+  /** Optional user id (e.g. customer_id). Mapped to `langfuse.user.id` so traces group by user. */
+  userId?: string | null;
   /** Prior conversation messages (already excluding system). For event-driven agents, usually []. */
   history?: ChatMessage[];
   /** Override default max completion tokens per LLM call. */
@@ -96,11 +98,15 @@ async function executeToolCall(tc: ChatToolCall): Promise<ChatMessage> {
       "feedme.mcp.server": parsed.server,
       "feedme.mcp.tool": parsed.tool,
       "feedme.tool.fq_name": tc.function.name,
+      "langfuse.observation.input": JSON.stringify(args),
     },
     async () => {
       const result = await callTool(parsed.server, parsed.tool, args);
       const text = result.content.map((c) => c.text).join("\n");
-      addSpanAttrs({ "feedme.tool.response_chars": text.length });
+      addSpanAttrs({
+        "feedme.tool.response_chars": text.length,
+        "langfuse.observation.output": text || JSON.stringify({ ok: true }),
+      });
       return {
         role: "tool" as const,
         tool_call_id: tc.id,
@@ -121,6 +127,7 @@ async function executeToolCall(tc: ChatToolCall): Promise<ChatMessage> {
  */
 export async function runAgent(options: AgentRunOptions): Promise<AgentResult> {
   const session_id = options.sessionId ?? `sess_${ulid()}`;
+  const userId = options.userId ?? "anonymous";
   return traced(
     "feedme.agent.run",
     {
@@ -128,6 +135,11 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentResult> {
       "feedme.session_id": session_id,
       "feedme.memory.injected": Boolean(options.memoryContext),
       "feedme.mcp.allowed": options.allowedMcpServers.join(","),
+      // ── Langfuse-native attributes (promote span to a first-class Langfuse trace) ──
+      "langfuse.trace.name": `${options.agent} · ${options.userMessage.slice(0, 50)}`,
+      "langfuse.user.id": userId,
+      "langfuse.session.id": session_id,
+      "langfuse.trace.input": options.userMessage,
     },
     () => runAgentInner(options, session_id),
   );
@@ -209,6 +221,7 @@ async function runAgentInner(options: AgentRunOptions, session_id: string): Prom
           "feedme.tokens.reasoning": totals.reasoning,
           "feedme.cost_usd": cost,
           "feedme.success": true,
+          "langfuse.trace.output": result.output,
         });
         return {
           output: result.output,
@@ -249,6 +262,7 @@ async function runAgentInner(options: AgentRunOptions, session_id: string): Prom
       "feedme.cost_usd": cost,
       "feedme.success": true,
       "feedme.turn_limit_hit": true,
+      "langfuse.trace.output": final,
     });
     return {
       output: final,

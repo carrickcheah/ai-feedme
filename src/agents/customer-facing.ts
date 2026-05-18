@@ -147,6 +147,7 @@ async function processChatMessageInner(
     userMessage: req.message,
     allowedMcpServers: ["pos", "payment"],
     sessionId: session_id,
+    userId: req.customer_id ?? null,
     history,
     maxCompletionTokens: 1024,
     memoryContext,

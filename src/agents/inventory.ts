@@ -79,6 +79,7 @@ export async function handleIngredientConsumed(event: IngredientConsumedData): P
     userMessage: buildEventMessage(event),
     allowedMcpServers: ["supplier"],
     sessionId: `sess_inventory_${event.order_id}_${event.ingredient_id}`,
+    userId: "system",
     maxCompletionTokens: 512,
     maxAgentTurns: 3,
   });

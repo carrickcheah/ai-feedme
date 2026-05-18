@@ -53,6 +53,7 @@ export async function handleOrderCreated(event: OrderCreatedEvent): Promise<void
     userMessage: buildOrderEventMessage(event),
     allowedMcpServers: ["pos", "kitchen-display", "supplier"],
     sessionId: `sess_kitchen_${event.order_id}`,
+    userId: event.customer_id ?? "system",
     maxCompletionTokens: 1024,
     maxAgentTurns: 5,
   });
