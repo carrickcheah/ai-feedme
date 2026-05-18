@@ -460,8 +460,9 @@ function ChatPanel({ open, onClose }) {
           )}
         </div>
 
-        {/* FAQ chips — visible only on first turn, hidden once a user message is sent */}
-        {!messages.some((m) => m.role === "user") && !loading && (
+        {/* FAQ chips — always visible (except while waiting on a reply) so
+            interviewer can keep clicking demo prompts throughout the flow */}
+        {!loading && (
           <div
             style={{
               padding: "10px 12px 0",
