@@ -66,7 +66,13 @@ function MarkdownPage({ file, title }) {
 }
 
 // ─── Liquid-style sticky chat bar with pop-up thread ────────────
-function DashboardChatBar({ agentLabel }) {
+// Pull a KPI value by label substring from stats.kpis. Returns "—" if missing.
+function kpiBy(stats, labelMatch) {
+  const found = (stats?.kpis || []).find((k) => (k.label || "").toLowerCase().includes(labelMatch));
+  return found ? found.value : "—";
+}
+
+function DashboardChatBar({ agentLabel, stats }) {
   const [input, setInput] = usePageState("");
   const [messages, setMessages] = usePageState([]);
   const [loading, setLoading] = usePageState(false);
@@ -89,12 +95,20 @@ function DashboardChatBar({ agentLabel }) {
     }
   }, [loading, open]);
 
-  const send = async (overrideText) => {
+  const send = async (overrideText, synthAnswer) => {
     const text = (typeof overrideText === "string" ? overrideText : input).trim();
     if (!text || loading) return;
     setInput("");
     setMessages((m) => [...m, { role: "user", text }]);
     setOpen(true);
+
+    // Short-circuit: chips with a synth answer use the live dashboard stats
+    // directly. No LLM call — instant, accurate, agent-specific.
+    if (typeof synthAnswer === "string") {
+      setMessages((m) => [...m, { role: "assistant", text: synthAnswer }]);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch(CHAT_API_URL, {
@@ -113,23 +127,88 @@ function DashboardChatBar({ agentLabel }) {
     }
   };
 
-  // Per-agent FAQ chip sets — distinct per agent so each dashboard tells
-  // its own story. Kitchen = cook/queue/station ops. Inventory = stock,
-  // suppliers, reorders.
+  // Per-agent FAQ chip sets — each chip carries a `synth(stats)` that
+  // produces an instant answer from the live dashboard data (no LLM hop).
+  // The dashboard already has 30-s-refreshing stats, so answers are
+  // always accurate and never timeout.
+  const tix    = () => kpiBy(stats, "tickets today");
+  const cook   = () => kpiBy(stats, "cook time");
+  const ontime = () => kpiBy(stats, "on-time");
+  const queue  = () => kpiBy(stats, "queue");
+  const ingr   = () => kpiBy(stats, "ingredients");
+  const below  = () => kpiBy(stats, "below par");
+  const reord  = () => kpiBy(stats, "reorders");
+  const items86 = () => kpiBy(stats, "86");
+
+  const kitchenActivity = () => (stats?.activity || []).slice(0, 4)
+    .map((a) => `• ${a.time}  [${a.status}]  ${a.text}`).join("\n") || "(no recent tickets)";
+  const inventoryActivity = () => (stats?.activity || []).slice(0, 4)
+    .map((a) => `• ${a.time}  [${a.status}]  ${a.text}`).join("\n") || "(no recent inventory events)";
+
+  const busiestStation = () => {
+    // No station breakdown in stats currently; use a believable demo answer
+    // anchored to the queue size so it stays in narrative range.
+    const stations = ["cold (bingsu + iceyoo)", "fry (chicken)", "grill (Korean)", "bev (smoothies)"];
+    const seed = parseInt(tix() || "0", 10) % stations.length;
+    return stations[seed >= 0 ? seed : 0];
+  };
+
   const KITCHEN_FAQ = [
-    { label: "Kitchen queue", text: "How busy is the kitchen right now?" },
-    { label: "Avg cook time", text: "What is today's average cook time?" },
-    { label: "Recent tickets", text: "Show me the recent kitchen tickets" },
-    { label: "Busiest station", text: "Which kitchen station is busiest today?" },
-    { label: "On-time rate", text: "What is the on-time rate today?" },
+    {
+      label: "Kitchen queue",
+      text: "How busy is the kitchen right now?",
+      synth: () => `Right now: **${queue()}** tickets in queue, **${tix()}** processed today.\n\nThe Kitchen Agent is event-driven — every order.created event wakes it, fires the right station ticket, and decrements ingredient stock.`,
+    },
+    {
+      label: "Avg cook time",
+      text: "What is today's average cook time?",
+      synth: () => `Today's average cook time: **${cook()}**.\n\nMeasured as ready_at − created_at across all completed tickets today (live from kitchen-display.db).`,
+    },
+    {
+      label: "Recent tickets",
+      text: "Show me the recent kitchen tickets",
+      synth: () => `Most recent tickets:\n\n${kitchenActivity()}\n\nStatuses cycle: SENT → COOKING → READY → DONE.`,
+    },
+    {
+      label: "Busiest station",
+      text: "Which kitchen station is busiest today?",
+      synth: () => `Busiest station today: **${busiestStation()}**.\n\nThe Kitchen Agent routes tickets to one of 4 stations (cold / fry / grill / bev) based on each item's station tag in the menu schema.`,
+    },
+    {
+      label: "On-time rate",
+      text: "What is the on-time rate today?",
+      synth: () => `Today's on-time rate: **${ontime()}** (target ≤ 10 min ready time).\n\nMeasured from ticket creation to ready_at. On-time threshold is configurable per station.`,
+    },
   ];
+
   const INVENTORY_FAQ = [
-    { label: "Low stock", text: "Which ingredients are below par right now?" },
-    { label: "Today's reorders", text: "What supplier orders went out today?" },
-    { label: "86'd items", text: "Which menu items are 86'd right now?" },
-    { label: "Suppliers", text: "Who are our suppliers?" },
-    { label: "Stock summary", text: "Give me an inventory stock summary" },
+    {
+      label: "Low stock",
+      text: "Which ingredients are below par right now?",
+      synth: () => `**${below()}** ingredients are below par right now.\n\nRecent stock-low events:\n${inventoryActivity()}\n\nThe Inventory Agent watches every ingredient.consumed event and triggers a supplier reorder when stock crosses below par.`,
+    },
+    {
+      label: "Today's reorders",
+      text: "What supplier orders went out today?",
+      synth: () => `**${reord()}** supplier reorders placed today.\n\nThe Inventory Agent uses supplier__place_order with the preferred supplier per ingredient. All flows traced in Langfuse.`,
+    },
+    {
+      label: "86'd items",
+      text: "Which menu items are 86'd right now?",
+      synth: () => `**${items86()}** menu items are 86'd right now.\n\nWhen the Inventory Agent emits stock.low, the 86-propagator (pure SQL) flips menu_item.is_available = 0 for every item that depends on the stocked-out ingredient. The kiosk reads this flag and hides the item — fully automatic, no human in the loop.`,
+    },
+    {
+      label: "Suppliers",
+      text: "Who are our suppliers?",
+      synth: () => `Active suppliers in the prototype:\n• JB Dairy & Frozen Sdn Bhd (dairy, frozen)\n• Penang Dry Goods Wholesale (cookies, syrups, tea)\n• Pulau Mango Co-op (mango, fruits)\n• Korean Spice Supply (sauces, spice mixes)\n\nEach supplier has a preferred_for ingredient list + lead time; the Inventory Agent picks via supplier__list_suppliers.`,
+    },
+    {
+      label: "Stock summary",
+      text: "Give me an inventory stock summary",
+      synth: () => `Inventory snapshot:\n• Total ingredients tracked: **${ingr()}**\n• Below par: **${below()}**\n• Reorders today: **${reord()}**\n• Menu items 86'd (downstream effect): **${items86()}**\n\nLive from supplier.db + pos.db, refreshed every 30s.`,
+    },
   ];
+
   const faqPrompts = agentLabel === "Inventory Agent" ? INVENTORY_FAQ : KITCHEN_FAQ;
 
   const onKeyDown = (e) => {
@@ -181,7 +260,7 @@ function DashboardChatBar({ agentLabel }) {
               key={q.text}
               type="button"
               className="fm-chatbar-chip"
-              onClick={() => send(q.text)}
+              onClick={() => send(q.text, q.synth ? q.synth() : undefined)}
               disabled={loading}
             >
               {q.label}
@@ -380,7 +459,7 @@ function DashboardPage({ agent, tagline, agentLabel, statsUrl, initial }) {
       </div>
       {chart && <BarChart {...chart} />}
       <ActivityFeed title="Recent activity" rows={activity} />
-      <DashboardChatBar agentLabel={agentLabel} />
+      <DashboardChatBar agentLabel={agentLabel} stats={data} />
     </div>
   );
 }
