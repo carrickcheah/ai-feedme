@@ -39,22 +39,22 @@ feedm.carrickcheah.com {
   handle {
     root * /srv/snow-dessert
     try_files {path} /index.html
-    # Force the browser to revalidate every time. Prototype frontend
-    # is small (~25 KB) and changes often; serving stale UI after a
-    # deploy is the most painful demo bug, so we accept the tiny cost.
-    header Cache-Control "no-cache, no-store, must-revalidate"
-    header Pragma "no-cache"
-    header Expires "0"
     file_server
   }
 
-  # Security headers
+  # Security + cache headers
   header {
     Strict-Transport-Security "max-age=31536000; includeSubDomains"
     X-Content-Type-Options "nosniff"
     X-Frame-Options "DENY"
     Referrer-Policy "strict-origin-when-cross-origin"
     -Server
+    # Force revalidate every request — prototype frontend is small
+    # and changes often; serving stale UI after a deploy is the most
+    # painful demo bug.
+    Cache-Control "no-cache, no-store, must-revalidate"
+    Pragma "no-cache"
+    Expires "0"
   }
 
   log {
