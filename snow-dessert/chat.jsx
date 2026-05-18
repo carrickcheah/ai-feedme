@@ -472,7 +472,7 @@ function ChatPanel({ open, onClose }) {
             }}
           >
             {[
-              { label: "Surprise me", text: "Surprise me with something I'd like" },
+              { label: "Surprise me", text: "Surprise me with something I'd like", promo: true },
               { label: "My last order", text: "what's my last order?" },
               { label: "Cheese bingsu?", text: "can I get the cheese bingsu?" },
               { label: "My usual", text: "I want my usual please" },
@@ -483,18 +483,52 @@ function ChatPanel({ open, onClose }) {
                 type="button"
                 onClick={() => send(q.text)}
                 disabled={loading}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 999,
-                  border: "1px solid #ffd0aa",
-                  background: "#fff8f0",
-                  color: "#c25500",
-                  fontSize: 13,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  whiteSpace: "nowrap",
-                }}
+                style={
+                  q.promo
+                    ? {
+                        padding: "6px 14px 6px 12px",
+                        borderRadius: 999,
+                        border: "none",
+                        background: "linear-gradient(135deg, #f47216 0%, #ff9344 100%)",
+                        color: "#fff",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        whiteSpace: "nowrap",
+                        boxShadow: "0 2px 6px rgba(244,114,22,0.35)",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }
+                    : {
+                        padding: "6px 12px",
+                        borderRadius: 999,
+                        border: "1px solid #ffd0aa",
+                        background: "#fff8f0",
+                        color: "#c25500",
+                        fontSize: 13,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        whiteSpace: "nowrap",
+                      }
+                }
               >
+                {q.promo && (
+                  <span
+                    style={{
+                      background: "rgba(255,255,255,0.25)",
+                      color: "#fff",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                      letterSpacing: 0.4,
+                    }}
+                  >
+                    PROMO
+                  </span>
+                )}
                 {q.label}
               </button>
             ))}
