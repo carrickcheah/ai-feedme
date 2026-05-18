@@ -1,6 +1,6 @@
 # Guide
 
-<img src="https://raw.githubusercontent.com/carrickcheah/ai-feedme/main/docs/facpic.png" alt="Click the AI Assistant bubble to start a chat" width="780" />
+<img src="https://raw.githubusercontent.com/carrickcheah/ai-feedme/main/docs/startbubble.png" alt="Click the AI Assistant bubble to start" width="380" />
 
 A short tour of what FeedMe is, what it can do, and how it's put together.
 
