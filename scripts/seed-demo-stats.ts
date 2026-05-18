@@ -142,13 +142,18 @@ if (sarahMenu.length >= 5) {
 
 // ─── POS: mark 4 more menu items as 86'd ────────────────────────
 const ext86 = pos.prepare(
-  `UPDATE menu_item SET is_available = 0
-   WHERE sku IN (
-     SELECT sku FROM menu_item WHERE is_available = 1 ORDER BY RANDOM() LIMIT 4
-   )`,
+  `UPDATE menu_item SET is_available = 0 WHERE sku = ?`,
 );
-const r86 = ext86.run();
-console.log(`[seed] menu items 86'd: +${r86.changes}`);
+// Reset all to available first so the count stays bounded across re-runs.
+pos.run("UPDATE menu_item SET is_available = 1");
+// Pick 4 random SKUs explicitly — SQLite's `IN (SELECT ... LIMIT N)` re-evaluates
+// the subquery per row, so RANDOM() inside the IN can match far more rows than N.
+const skus86 = (pos.prepare("SELECT sku FROM menu_item ORDER BY RANDOM() LIMIT 4").all() as Array<{ sku: string }>).map((r) => r.sku);
+let r86count = 0;
+for (const sku of skus86) {
+  if (ext86.run(sku).changes > 0) r86count++;
+}
+console.log(`[seed] menu items 86'd: ${r86count} (reset + re-applied)`);
 
 supplier.close();
 kds.close();
