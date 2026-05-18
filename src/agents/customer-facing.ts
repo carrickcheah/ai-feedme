@@ -8,7 +8,9 @@ import { ulid } from "ulid";
 import { runAgent } from "./agent-base";
 import { type OrderCreatedEvent } from "./kitchen";
 import { publishOrderCreated } from "../events";
-import { memgcAnswer } from "../memgc-client";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ChatMessage } from "../brain";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
@@ -34,6 +36,32 @@ export interface ChatResponse {
 
 const sessions = new Map<string, ChatMessage[]>();
 const MAX_HISTORY = 20;
+
+const PROFILES_DIR = join(dirname(fileURLToPath(import.meta.url)), "prompts", "customer-profiles");
+const profileCache = new Map<string, string | null>();
+
+/**
+ * Load a hardcoded customer profile (.md) by customer_id. Returns null if
+ * no profile exists for that id — caller should treat the customer as
+ * anonymous in that case.
+ */
+function loadCustomerProfile(customer_id: string): string | null {
+  if (profileCache.has(customer_id)) return profileCache.get(customer_id) ?? null;
+  // customer_id is a controlled string from our own POS schema (e.g. cust_sarah_001).
+  // Defensive sanitize anyway so a bad id can't traverse out of PROFILES_DIR.
+  if (!/^[a-z0-9_]+$/i.test(customer_id)) {
+    profileCache.set(customer_id, null);
+    return null;
+  }
+  try {
+    const text = readFileSync(join(PROFILES_DIR, `${customer_id}.md`), "utf-8").trim();
+    profileCache.set(customer_id, text);
+    return text;
+  } catch {
+    profileCache.set(customer_id, null);
+    return null;
+  }
+}
 
 function buildSystemPrompt(channel: string, session_id: string, customer_id: string | null): string {
   return loadPrompt("customer-facing", {
@@ -108,27 +136,17 @@ async function processChatMessageInner(
   const session_id = req.session_id ?? `sess_${ulid()}`;
   const history = sessions.get(session_id) ?? [];
 
-  // ── MemGC: fetch customer profile if customer_id present (cached) ──
+  // ── Customer profile: load directly from a hardcoded .md per customer_id ──
+  // For the demo we ship known VIP profiles as plain markdown under
+  // src/agents/prompts/customer-profiles/<customer_id>.md so the first turn
+  // is instant. The MemGC sidecar is left in place as the architectural
+  // story (and would be the path for unknown customers in production), but
+  // the demo's headline path does not pay its ~50s PRISM cost.
   let memoryContext: string | undefined;
   if (req.customer_id && history.length === 0) {
-    // Only on first turn — cached subsequent answers reuse it for free
-    const t0 = Date.now();
-    const profile = await memgcAnswer(
-      `What do you know about customer ${req.customer_id}? Summarize their preferences, allergies, usual orders, loyalty tier.`,
-    );
-    if (profile.text && profile.memories.length > 0) {
-      memoryContext = profile.text;
-      logger.info(
-        {
-          customer_id: req.customer_id,
-          memories: profile.memories.length,
-          cached: profile.cached,
-          duration_ms: Date.now() - t0,
-        },
-        "[AGENT:customer-facing] memory loaded",
-      );
-    } else {
-      logger.debug({ customer_id: req.customer_id }, "[AGENT:customer-facing] no memory for customer");
+    memoryContext = loadCustomerProfile(req.customer_id) ?? undefined;
+    if (memoryContext) {
+      logger.info({ customer_id: req.customer_id }, "[AGENT:customer-facing] profile loaded (hardcoded)");
     }
   }
 
