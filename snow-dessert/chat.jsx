@@ -472,7 +472,7 @@ function ChatPanel({ open, onClose }) {
             }}
           >
             {[
-              { label: "Say hi", text: "hi" },
+              { label: "Surprise me", text: "Surprise me with something I'd like" },
               { label: "My last order", text: "what's my last order?" },
               { label: "Cheese bingsu?", text: "can I get the cheese bingsu?" },
               { label: "My usual", text: "I want my usual please" },
