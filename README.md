@@ -76,9 +76,9 @@ Kitchen and Inventory are not chat-driven — they're triggered by events. Their
 
 The chat endpoint emits OpenAI-streamed token deltas through a Hono SSE response (`event: chunk` / `event: done`). The frontend reads them with `response.body.getReader()` and renders Markdown progressively. First tokens visible in ~600ms; full reply in 2-4s.
 
-### Observability via OTLP (no Langfuse SDK)
+### Observability: OpenTelemetry → Langfuse Cloud
 
-`src/instrumentation.ts` wires `@opentelemetry/sdk-node` directly to Langfuse Cloud's `/api/public/otel/v1/traces` endpoint over HTTP Basic auth. Every LLM call, every tool dispatch, every event fan-out is a span. `import "./instrumentation"` is the **first** import in `src/index.ts` — the auto-instrumented OpenAI SDK won't be patched otherwise.
+Traces ship to **Langfuse Cloud** over its OTLP endpoint. Every LLM call, tool dispatch, and event fan-out is a span. We use OpenTelemetry directly (`@opentelemetry/sdk-node` + the OTLP HTTP exporter) instead of the `langfuse` npm SDK — point `LANGFUSE_BASE_URL` at Tempo, Honeycomb, or Phoenix to swap vendors with no code change. `import "./instrumentation"` is the **first** import in `src/index.ts` so the auto-instrumented OpenAI SDK is patched before any request fires.
 
 ### Memory as a retrieval pipeline, not a vector DB
 
