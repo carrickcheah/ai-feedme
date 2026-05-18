@@ -35,18 +35,16 @@ feedm.carrickcheah.com {
     reverse_proxy app:8002
   }
 
-  # No-cache headers for frontend source files — applied at the site
-  # level so they win regardless of which handle block answers. Without
-  # this, browsers serve stale pages.jsx/chat.jsx after a deploy.
-  @frontend_code path_regexp \.(html|jsx|js)$
-  header @frontend_code Cache-Control "no-cache, no-store, must-revalidate"
-  header @frontend_code Pragma "no-cache"
-  header @frontend_code Expires "0"
-
   # Static frontend
   handle {
     root * /srv/snow-dessert
     try_files {path} /index.html
+    # Force the browser to revalidate every time. Prototype frontend
+    # is small (~25 KB) and changes often; serving stale UI after a
+    # deploy is the most painful demo bug, so we accept the tiny cost.
+    header Cache-Control "no-cache, no-store, must-revalidate"
+    header Pragma "no-cache"
+    header Expires "0"
     file_server
   }
 
