@@ -40,6 +40,15 @@ feedm.carrickcheah.com {
     root * /srv/snow-dessert
     try_files {path} /index.html
     file_server
+
+    # No caching for HTML / JSX / JS source — these are the frontend
+    # "code" files that change on every deploy. Without this, browsers
+    # serve stale UI after a push (the most painful demo bug).
+    # CDN-Cache-Control: revalidate every time.
+    @nocache path *.html *.jsx *.js
+    header @nocache Cache-Control "no-cache, no-store, must-revalidate"
+    header @nocache Pragma "no-cache"
+    header @nocache Expires "0"
   }
 
   # Security headers
