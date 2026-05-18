@@ -32,13 +32,19 @@ A pure-SQL **86 propagator** then flips every menu item that depends on a stocke
 
 ## Architecture
 
-![FeedMe v8 architecture](docs/chart_feedme_agent_architecture_v8.svg)
+![FeedMe architecture](docs/chart_feedme_architecture.svg)
 
 Three orthogonal abstractions do all the heavy lifting:
 
 1. **One agent loop, three personalities.** `src/agents/agent-base.ts` exports a single `runAgent()` that runs the LLM-call → tool-dispatch → repeat loop, with span instrumentation, cost accounting, and an `allowedMcpServers` allow-list baked in. Each agent is a ~100-line wrapper that supplies a job-specific system prompt + a tool whitelist. Adding a fourth agent is a copy-paste-edit, not a refactor.
 2. **Events with a graceful fallback.** `src/events/publisher.ts` tries Kafka with a 3-second connect timeout; if the broker is unreachable, it directly invokes the in-process handler. Both paths converge on the **same** handler. The result: the demo runs end-to-end with zero infrastructure, but scales to Kafka the moment you bring a broker up.
 3. **LLM for intent, TypeScript for fan-out.** Agents call MCP tools to reason about ambiguous input; downstream effects (which events to publish, which SKUs are affected) are computed by querying SQLite directly. Determinism for typed contracts, LLM only where ambiguity earns its cost.
+
+### Agent flows
+
+Same loop, different triggers — HTTP for chat, Kafka events (with in-process fallback) for kitchen + inventory.
+
+![Agent flows](docs/chart_agent_flows.svg)
 
 ---
 
@@ -53,6 +59,10 @@ The customer-facing agent literally cannot call kitchen or supplier tools — it
 | customer-facing | `pos`, `payment` |
 | kitchen | `pos`, `kitchen-display`, `supplier` |
 | inventory | `supplier` |
+
+Each MCP server is one Hono process, owns one SQLite file (WAL), exposes a tight tool surface.
+
+![MCP servers, tools, and databases](docs/chart_mcp_servers.svg)
 
 ### Externalised prompts
 
@@ -73,6 +83,8 @@ The chat endpoint emits OpenAI-streamed token deltas through a Hono SSE response
 ### Memory as a retrieval pipeline, not a vector DB
 
 `memgc-service/` is a Python FastAPI sidecar wrapping [`memgc-py`](https://github.com/) — the PRISM agentic retrieval loop (Analyzer → Selector ↔ Adder → Generator → Verifier). TypeScript calls it over HTTP with a Redis cache keyed by `sha256(question)` and a 300s TTL. Cold call ~30s; cached call <10ms.
+
+![MemGC answer flow](docs/chart_memgc_answer_flow.svg)
 
 ### Single-tenant SQLite with WAL was a choice, not an accident
 
@@ -196,7 +208,7 @@ DNS is automated via the Cloudflare API; no manual dashboard clicks anywhere in 
 
 | Diagram | What it shows |
 |---|---|
-| [`docs/chart_feedme_agent_architecture_v8.svg`](docs/chart_feedme_agent_architecture_v8.svg) | Master map — every box maps to a file or service |
+| [`docs/chart_feedme_architecture.svg`](docs/chart_feedme_architecture.svg) | Master map — every box maps to a file or service |
 | [`docs/chart_agent_flows.svg`](docs/chart_agent_flows.svg) | Per-agent loop trace |
 | [`docs/chart_agent_flow_kitchen_inventory.svg`](docs/chart_agent_flow_kitchen_inventory.svg) | Event-driven Kitchen + Inventory dance |
 | [`docs/chart_mcp_servers.svg`](docs/chart_mcp_servers.svg) | MCP topology, ports, schemas |
