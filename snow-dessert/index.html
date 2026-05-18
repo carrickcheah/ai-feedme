@@ -379,11 +379,14 @@
 
   .fm-chatpop {
     position: fixed;
-    bottom: 88px;
+    /* Sit above the FAQ chip row (bottom: 80px, ~36px tall) plus the
+       chat input bar (bottom: 20px, ~40px tall). 140px leaves a clear
+       gap so chips stay clickable while the popup is open. */
+    bottom: 140px;
     left: 50%;
     transform: translateX(-50%);
     width: min(900px, calc(100vw - 280px - 64px));
-    height: min(560px, calc(100vh - 140px));
+    height: min(540px, calc(100vh - 200px));
     background: #fff;
     border-radius: 16px;
     box-shadow: 0 12px 40px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.05);
