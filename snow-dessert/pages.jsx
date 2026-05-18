@@ -113,20 +113,22 @@ function DashboardChatBar({ agentLabel }) {
     }
   };
 
-  // Per-agent FAQ chip sets — pre-filled prompts the interviewer can click.
+  // Per-agent FAQ chip sets — distinct per agent so each dashboard tells
+  // its own story. Kitchen = cook/queue/station ops. Inventory = stock,
+  // suppliers, reorders.
   const KITCHEN_FAQ = [
-    { label: "Menu overview", text: "Give me a quick overview of the menu" },
-    { label: "Prep times", text: "How long do the most popular items take to prepare?" },
-    { label: "Out of stock", text: "What items are unavailable right now?" },
-    { label: "Bingsu options", text: "Show me the bingsu options" },
-    { label: "Chicken dishes", text: "What chicken dishes do you have?" },
+    { label: "Kitchen queue", text: "How busy is the kitchen right now?" },
+    { label: "Avg cook time", text: "What is today's average cook time?" },
+    { label: "Recent tickets", text: "Show me the recent kitchen tickets" },
+    { label: "Busiest station", text: "Which kitchen station is busiest today?" },
+    { label: "On-time rate", text: "What is the on-time rate today?" },
   ];
   const INVENTORY_FAQ = [
-    { label: "Menu overview", text: "Give me a quick overview of the menu" },
-    { label: "Price ranges", text: "What's the price range across the menu?" },
-    { label: "Out of stock", text: "Which items are unavailable right now?" },
-    { label: "Iceyoo options", text: "Show me the iceyoo options" },
-    { label: "Under RM12", text: "What menu items are under RM12?" },
+    { label: "Low stock", text: "Which ingredients are below par right now?" },
+    { label: "Today's reorders", text: "What supplier orders went out today?" },
+    { label: "86'd items", text: "Which menu items are 86'd right now?" },
+    { label: "Suppliers", text: "Who are our suppliers?" },
+    { label: "Stock summary", text: "Give me an inventory stock summary" },
   ];
   const faqPrompts = agentLabel === "Inventory Agent" ? INVENTORY_FAQ : KITCHEN_FAQ;
 
