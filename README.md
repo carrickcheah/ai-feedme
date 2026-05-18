@@ -1,32 +1,26 @@
 # FeedMe — Autonomous Restaurant Agent System
 
-> A working prototype of a multi-agent AI runtime for F&B operations.
-> Three agents collaborate over events and MCP tools to take orders, schedule the kitchen, and reorder inventory autonomously — with a real auto-86 chain wired end-to-end.
+> A working prototype where three AI agents run a small restaurant together — taking orders, scheduling the kitchen, and reordering ingredients on their own.
 
 **Live demo →** [`feedm.carrickcheah.com`](https://feedm.carrickcheah.com/)
-&nbsp;&nbsp;·&nbsp;&nbsp; **Stack** Bun · TypeScript · Hono · Azure GPT-5.5 · MCP · Kafka · Redis · Langfuse · SQLite WAL · Docker · Caddy
-&nbsp;&nbsp;·&nbsp;&nbsp; **Code** ~4.6k LOC TS + a Python sidecar
-&nbsp;&nbsp;·&nbsp;&nbsp; **Evals** 30 cases across happy-path / multi-turn / edge-cases / red-team
-&nbsp;&nbsp;·&nbsp;&nbsp; **CI/CD** Self-hosted runner, ~35s green deploys with auto-SSL
+&nbsp;&nbsp;·&nbsp;&nbsp; **Stack** Bun · TypeScript · Hono · Azure GPT-5.5 · MCP · Kafka · Redis · Langfuse · SQLite · Docker · Caddy
+&nbsp;&nbsp;·&nbsp;&nbsp; **Code** ~4.6k lines of TypeScript + a small Python service
+&nbsp;&nbsp;·&nbsp;&nbsp; **Evals** 30 test cases
+&nbsp;&nbsp;·&nbsp;&nbsp; **Deploy** Push to main → live in ~35 seconds
 
 ---
 
-## What it does, in 60 seconds
+## What it does
 
-A guest walks up to a kiosk (the live demo) and chats with a **customer-facing agent** that:
+A guest opens the kiosk and chats. Behind the scenes, three agents handle the work:
 
-- Searches the menu over an **MCP server** with FTS5 + availability filters
-- Recognises returning customers (e.g. *Sarah, peanut-allergic, VIP*) by pulling profile facts from **MemGC**, a 4-agent retrieval pipeline running as a Python sidecar
-- Creates the order, then emits an `order.created` event
+| Agent | What it does |
+|---|---|
+| **Customer-facing** | Looks at the menu, recognises returning customers (like Sarah — peanut allergy, VIP), takes the order |
+| **Kitchen** | When an order arrives, sends tickets to the right station and tracks which ingredients were used |
+| **Inventory** | When ingredients run low, reorders from the supplier |
 
-That event fans out to two more agents:
-
-| Agent | Wakes on | Decides | Emits |
-|---|---|---|---|
-| **Kitchen** | `order.created` | Which station fires which ticket, what ingredients are consumed | `ingredient.consumed` |
-| **Inventory** | `ingredient.consumed` | Whether to reorder from the preferred supplier; if stock dips below par, declare stock-low | `stock.low` |
-
-A pure-SQL **86 propagator** then flips every menu item that depends on a stocked-out ingredient to `is_available = 0` — the kiosk's frontend reads that flag and the item disappears from the menu *automatically*, without anyone touching code or UI. That's the demo's headline moment.
+If an ingredient runs out, every menu item that needs it disappears from the kiosk **automatically** — no human in the loop. That's the headline moment of the demo.
 
 ---
 
@@ -34,65 +28,61 @@ A pure-SQL **86 propagator** then flips every menu item that depends on a stocke
 
 ![FeedMe architecture](docs/chart_feedme_architecture.svg)
 
-Three orthogonal abstractions do all the heavy lifting:
+The whole system runs on three simple ideas:
 
-1. **One agent loop, three personalities.** `src/agents/agent-base.ts` exports a single `runAgent()` that runs the LLM-call → tool-dispatch → repeat loop, with span instrumentation, cost accounting, and an `allowedMcpServers` allow-list baked in. Each agent is a ~100-line wrapper that supplies a job-specific system prompt + a tool whitelist. Adding a fourth agent is a copy-paste-edit, not a refactor.
-2. **Events with a graceful fallback.** `src/events/publisher.ts` tries Kafka with a 3-second connect timeout; if the broker is unreachable, it directly invokes the in-process handler. Both paths converge on the **same** handler. The result: the demo runs end-to-end with zero infrastructure, but scales to Kafka the moment you bring a broker up.
-3. **LLM for intent, TypeScript for fan-out.** Agents call MCP tools to reason about ambiguous input; downstream effects (which events to publish, which SKUs are affected) are computed by querying SQLite directly. Determinism for typed contracts, LLM only where ambiguity earns its cost.
+1. **One shared agent loop.** All three agents use the same code (`src/agents/agent-base.ts`). Each one is a small wrapper that says "here's my job and here are the tools I'm allowed to use."
+2. **Events with a safety net.** Agents talk to each other through Kafka events. If Kafka isn't running, the same handler runs in-process instead — so the demo works with zero infrastructure.
+3. **LLM only where it earns its cost.** Agents reason about messy human input with an LLM. Anything deterministic (which menu items to hide, which event to publish next) is plain SQL or TypeScript.
 
 ### Agent flows
 
-Same loop, different triggers — HTTP for chat, Kafka events (with in-process fallback) for kitchen + inventory.
+Chat triggers the customer-facing agent over HTTP. Orders fire events that wake the kitchen and inventory agents.
 
 ![Agent flows](docs/chart_agent_flows.svg)
 
 ---
 
-## Engineering pillars
+## How it's built
 
-### Tool boundaries are the security model
+### Each agent only sees the tools it needs
 
-The customer-facing agent literally cannot call kitchen or supplier tools — its `allowedMcpServers: ["pos", "payment"]` rejects everything else at dispatch time. This isn't a prompt convention; it's enforced by the loop. Forgetting the allow-list shows up immediately in traces with an `unauthorized_tool` span event.
+The customer-facing agent can search the menu and take orders. It **cannot** mess with kitchen tickets or supplier orders — the code rejects those calls before they reach an LLM.
 
-| Agent | Allowed MCP servers |
+| Agent | Tools it can use |
 |---|---|
-| customer-facing | `pos`, `payment` |
-| kitchen | `pos`, `kitchen-display`, `supplier` |
-| inventory | `supplier` |
+| Customer-facing | menu search, payment |
+| Kitchen | menu lookup, kitchen tickets, supplier |
+| Inventory | supplier only |
 
-Each MCP server is one Hono process, owns one SQLite file (WAL), exposes a tight tool surface.
+Each tool group lives in its own small server with its own database.
 
 ![MCP servers, tools, and databases](docs/chart_mcp_servers.svg)
 
-### Externalised prompts
+### Prompts live in plain markdown
 
-System prompts live as `.md` files under `src/agents/prompts/` with `{{mustache}}` placeholders filled at call time. Non-engineers can tweak agent behaviour without touching TypeScript, prompts diff cleanly in code review, and the loader is a 30-line synchronous cache.
+The instructions each agent follows are in `.md` files under `src/agents/prompts/`. Edit a file, push, and the new behaviour is live in 35 seconds. No code changes needed.
 
-### Event-driven agents share the same loop as chat agents
+### Streaming answers
 
-Kitchen and Inventory are not chat-driven — they're triggered by events. Their handlers convert the event payload into a synthetic natural-language description + a structured `Compact form for tool args:` line, then feed that as the user-message into `runAgent()`. One loop serves both chat and event flows; one cost-tracking and tracing surface for everything.
+The chat doesn't wait for the full reply before showing anything — words appear as the model generates them, so the kiosk feels instant.
 
-### Streaming end-to-end
+### Every action is traced
 
-The chat endpoint emits OpenAI-streamed token deltas through a Hono SSE response (`event: chunk` / `event: done`). The frontend reads them with `response.body.getReader()` and renders Markdown progressively. First tokens visible in ~600ms; full reply in 2-4s.
+Every chat, every tool call, every event lands in **Langfuse Cloud**. You can replay any conversation, see exactly which tools fired, how long they took, and what they cost.
 
-### Observability: Langfuse Cloud
+### Memory
 
-Every LLM call, tool dispatch, and event fan-out is traced and sent to **Langfuse Cloud**. Searchable, filterable, replayable.
+A small Python service (`memgc-service/`) remembers facts about customers — their preferences, allergies, past orders — and gives that context to the agent on every chat. Results are cached in Redis so it's fast on the second call.
 
-### Memory as a retrieval pipeline, not a vector DB
+![Memory lookup flow](docs/chart_memgc_answer_flow.svg)
 
-`memgc-service/` is a Python FastAPI sidecar wrapping [`memgc-py`](https://github.com/) — the PRISM agentic retrieval loop (Analyzer → Selector ↔ Adder → Generator → Verifier). TypeScript calls it over HTTP with a Redis cache keyed by `sha256(question)` and a 300s TTL. Cold call ~30s; cached call <10ms.
+### One database per agent
 
-![MemGC answer flow](docs/chart_memgc_answer_flow.svg)
+Each tool server owns one SQLite file. Multiple readers, one writer. No setup, no migrations, no Postgres ops.
 
-### Single-tenant SQLite with WAL was a choice, not an accident
+### Tested against real prompts
 
-Four MCP servers open the same set of SQLite files (`pos.db`, `kitchen-display.db`, `supplier.db`, `payment.db`) with WAL mode enabled — concurrent readers, single writer, zero ops cost. Postgres + multi-tenancy + RLS is a deliberately deferred chapter.
-
-### Promptfoo evals, graded by the same Azure deployment
-
-30 cases under `evals/golden-set/`, four suites — happy-path, multi-turn, edge-cases, red-team. The rubric grader uses **the same** Azure GPT-5.5 deployment, so the whole evaluation stack has one external dependency and no `OPENAI_API_KEY` requirement. Empty outputs from Azure Content Safety are treated as PASS — defense-in-depth.
+30 test cases under `evals/golden-set/`, graded by the same model that runs in production. Covers normal use, edge cases, multi-turn chats, and adversarial inputs.
 
 ---
 
@@ -100,18 +90,18 @@ Four MCP servers open the same set of SQLite files (`pos.db`, `kitchen-display.d
 
 | Layer | Choice | Why |
 |---|---|---|
-| Runtime | **Bun 1.3+** | Fast startup, built-in SQLite + test runner, single tool for run/install |
-| HTTP | **Hono** | Tiny edge-style router, native SSE, plays well with Bun |
-| LLM | **Azure OpenAI GPT-5.5** | `reasoning_effort` knob, content safety, EU-hosted |
-| Streaming | **Server-Sent Events** | Simpler than WebSockets for unidirectional token delivery |
-| Events | **Kafka (KRaft mode) → in-process fallback** | Production-grade contract, zero-infra dev |
-| Memory | **MemGC PRISM** (Python sidecar) + **Redis** cache | Agentic retrieval over LM-friendly facts; cache hides cold-start |
-| Storage | **SQLite WAL** | One file per bounded context, concurrent reads |
-| MCP | **HTTP JSON-RPC** (not stdio) | Multiple servers concurrent, language-agnostic |
-| Observability | **Langfuse Cloud** | Every LLM call, tool, and event traced |
-| Edge | **Caddy** + Let's Encrypt | Auto-SSL via ACME HTTP-01, single-line reverse proxy |
-| CI/CD | **Self-hosted GitHub Actions runner** | No SSH, no billing, ~35s deploys |
-| Container | **Docker Compose** (5-service stack) | One file describes the whole topology |
+| Runtime | **Bun** | Fast, built-in SQLite + tests |
+| HTTP | **Hono** | Small, fast, supports streaming |
+| LLM | **Azure OpenAI GPT-5.5** | Reasoning mode + content safety |
+| Streaming | **Server-Sent Events** | Simple way to push tokens to the browser |
+| Events | **Kafka + in-process fallback** | Real event bus, but works without it |
+| Memory | **Python sidecar + Redis cache** | Custom retrieval over customer facts |
+| Storage | **SQLite** | One file per service, zero ops |
+| MCP | **HTTP JSON-RPC** | Standard tool protocol |
+| Observability | **Langfuse Cloud** | Every action traced |
+| Edge | **Caddy** | Automatic HTTPS |
+| Deploy | **Self-hosted GitHub runner** | ~35 second deploys |
+| Containers | **Docker Compose** | One file describes the whole stack |
 
 ---
 
@@ -119,33 +109,24 @@ Four MCP servers open the same set of SQLite files (`pos.db`, `kitchen-display.d
 
 ```
 src/
-  index.ts                    Hono entry; instrumentation FIRST import
-  instrumentation.ts          OTLP exporter → Langfuse Cloud
-  config/env.ts               Zod-validated environment, per-agent resolver
-  brain/                      Azure client + MCP HTTP client + tool adapters
+  index.ts                    Main entry point
   agents/
-    agent-base.ts             runAgent() — the shared multi-turn loop
-    customer-facing.ts        Synchronous, HTTP-triggered (chat)
-    kitchen.ts                order.created → ingredient.consumed
-    inventory.ts              ingredient.consumed → stock.low
-    prompts/*.md              Externalised system prompts
+    agent-base.ts             Shared agent loop
+    customer-facing.ts        Handles chat
+    kitchen.ts                Handles new orders
+    inventory.ts              Handles low stock
+    prompts/*.md              Plain-text agent instructions
   events/
-    publisher.ts              Kafka → in-process fallback
-    consumers.ts              Kafka consumers (when broker is up)
-    86-propagator.ts          Pure-SQL stock.low → menu_item.is_available=0
-    types.ts                  Typed event envelopes
-  memgc-client.ts             HTTP wrapper for MemGC with Redis cache
-  lib/tracing.ts              traced() / addSpanAttrs() helpers
-  api/                        /api/chat, /api/admin/{kitchen,inventory}-stats
-mcp-servers/{pos,kitchen-display,payment,supplier}/
-  index.ts                    Hono JSON-RPC server
-  tools.ts                    Tool definitions + handlers
-  schema.sql + client.ts      SQLite schema + bun:sqlite client
-memgc-service/                Python FastAPI sidecar (uv-managed)
-snow-dessert/                 React kiosk UI (no build step — CDN Babel)
-evals/golden-set/             30 Promptfoo cases, 4 yaml suites
-docs/                         Architecture diagrams + design notes
-deploy/                       Caddyfile + idempotent deploy.sh
+    publisher.ts              Kafka or in-process
+    86-propagator.ts          Hides menu items when stock runs out
+  memgc-client.ts             Talks to the memory service
+  api/                        Chat + dashboard endpoints
+mcp-servers/                  Four small tool servers (pos, kitchen, payment, supplier)
+memgc-service/                Python memory service
+snow-dessert/                 The kiosk UI
+evals/golden-set/             30 test cases
+docs/                         Diagrams + notes
+deploy/                       Caddy config + deploy script
 ```
 
 ---
@@ -153,91 +134,55 @@ deploy/                       Caddyfile + idempotent deploy.sh
 ## Quickstart
 
 ```bash
-# 1. Clone & install
+# 1. Install
 bun install
 
-# 2. Copy the env template and fill in credentials
+# 2. Set up environment
 cp .env.example .env
 
-# 3. Boot the four MCP servers + main app
-bun run mcp:all   # in one terminal
-bun run dev       # in another (port 8002)
+# 3. Start everything
+bun run mcp:all   # tool servers
+bun run dev       # main app
 
-# 4. (Optional) Boot Kafka + Redis + MemGC for the full stack
-bun run infra:up
-make memgc:up
-
-# 5. Open the kiosk
+# 4. Open the kiosk
 cd snow-dessert && bun run dev
 ```
 
-Without any infra the app still works — events fall back to in-process, MemGC fails open, and the demo runs cleanly off SQLite alone.
+The demo runs without Kafka, Redis, or the memory service — they're optional speed boosts.
 
 ---
 
 ## Evals
 
 ```bash
-bun run eval         # full 30-case suite (~60s, ~$0.30 Azure)
-bun run eval:happy   # one suite for fast iteration
-bun run eval:view    # open the HTML dashboard
+bun run eval         # all 30 tests (~60s)
+bun run eval:happy   # quick subset
+bun run eval:view    # open results in browser
 ```
 
-Suites cover:
-
-- **Happy path** — order placement, modifications, menu queries
-- **Multi-turn** — context carries across 3-5 turn dialogues
-- **Edge cases** — empty cart, 86'd items, unknown SKUs, payment retries
-- **Red team** — prompt injection, off-topic refusal, refund manipulation, allergen safety
+Covers normal orders, multi-turn conversations, edge cases (out-of-stock, unknown items, payment retries), and adversarial inputs (prompt injection, refund manipulation, allergen safety).
 
 ---
 
 ## Production
 
-The live site runs on a Docker Compose stack — five containers (Caddy, app, MCP, MemGC, Redis), one named volume per persisted DB, automatic HTTPS via Let's Encrypt, and a self-hosted GitHub Actions runner that pulls + rebuilds + restarts on every push to `main`. Total deploy time from `git push` to green health-check: **34-38 seconds**.
+The live site runs as five Docker containers — Caddy (proxy + auto-HTTPS), the main app, the tool servers, the memory service, and Redis. A self-hosted GitHub Actions runner deploys every push to `main` in about 35 seconds.
 
 ```
-push → self-hosted runner → docker compose up -d --build → /health → public probe
+push → runner → docker compose up --build → health check → live
 ```
-
-DNS is automated via the Cloudflare API; no manual dashboard clicks anywhere in the pipeline. Caddy handles cert issuance and renewal — zero manual ops after the first boot.
 
 ---
 
-## Architecture diagrams
+## Diagrams
 
 | Diagram | What it shows |
 |---|---|
-| [`docs/chart_feedme_architecture.svg`](docs/chart_feedme_architecture.svg) | Master map — every box maps to a file or service |
-| [`docs/chart_agent_flows.svg`](docs/chart_agent_flows.svg) | Per-agent loop trace |
-| [`docs/chart_agent_flow_kitchen_inventory.svg`](docs/chart_agent_flow_kitchen_inventory.svg) | Event-driven Kitchen + Inventory dance |
-| [`docs/chart_mcp_servers.svg`](docs/chart_mcp_servers.svg) | MCP topology, ports, schemas |
-| [`docs/chart_memgc_answer_flow.svg`](docs/chart_memgc_answer_flow.svg) | PRISM retrieval pipeline inside MemGC |
-
----
-
-## Scope decisions (the things deliberately not built)
-
-A senior signal is knowing what *not* to add. These are intentional gaps, not oversights:
-
-- **No Postgres.** SQLite WAL fits the prototype's blast-radius. The migration is a chapter, not a refactor.
-- **No multi-tenancy or RLS.** Single restaurant, one schema, one set of credentials. Would change every query if added — wait for a real customer.
-- **No real payment integration.** The `payment__refund` tool is *intentionally* locked at the agent level — agents have no business issuing refunds without human review.
-- **No tax computation.** `SST_PERCENT=0` is checked in, with a comment.
-- **No WhatsApp / mobile clients.** Web kiosk only, until a real channel justifies the complexity.
-
----
-
-## What's interesting if you read the code
-
-A short tour for reviewers:
-
-1. **`src/agents/agent-base.ts`** — read this first. It's the entire agent runtime in one file.
-2. **`src/events/publisher.ts`** — see how the Kafka-or-in-process pattern works in 60 lines.
-3. **`src/events/86-propagator.ts`** — pure SQL, no agent. The 86 chain is provably correct.
-4. **`mcp-servers/pos/tools.ts`** — the tool-definition / handler pattern, with `list_recent_orders` as the cleanest recent example.
-5. **`src/agents/prompts/customer-facing.md`** — the actual system prompt that runs in production. No magic.
-6. **`evals/golden-set/red-team.yaml`** — five adversarial cases, all rubric-graded.
+| [Master map](docs/chart_feedme_architecture.svg) | Full system at a glance |
+| [Agent flows](docs/chart_agent_flows.svg) | How a chat triggers each agent |
+| [Kitchen + Inventory flow](docs/chart_agent_flow_kitchen_inventory.svg) | The auto-reorder chain |
+| [Tool servers](docs/chart_mcp_servers.svg) | MCP servers, their tools, their databases |
+| [Memory flow](docs/chart_memgc_answer_flow.svg) | How customer facts are retrieved |
 
 ---
 
