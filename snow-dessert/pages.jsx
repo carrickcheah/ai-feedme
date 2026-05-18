@@ -89,8 +89,8 @@ function DashboardChatBar({ agentLabel }) {
     }
   }, [loading, open]);
 
-  const send = async () => {
-    const text = input.trim();
+  const send = async (overrideText) => {
+    const text = (typeof overrideText === "string" ? overrideText : input).trim();
     if (!text || loading) return;
     setInput("");
     setMessages((m) => [...m, { role: "user", text }]);
@@ -112,6 +112,23 @@ function DashboardChatBar({ agentLabel }) {
       setLoading(false);
     }
   };
+
+  // Per-agent FAQ chip sets — pre-filled prompts the interviewer can click.
+  const KITCHEN_FAQ = [
+    { label: "Menu overview", text: "Give me a quick overview of the menu" },
+    { label: "Prep times", text: "How long do the most popular items take to prepare?" },
+    { label: "Out of stock", text: "What items are unavailable right now?" },
+    { label: "Bingsu options", text: "Show me the bingsu options" },
+    { label: "Chicken dishes", text: "What chicken dishes do you have?" },
+  ];
+  const INVENTORY_FAQ = [
+    { label: "Menu overview", text: "Give me a quick overview of the menu" },
+    { label: "Price ranges", text: "What's the price range across the menu?" },
+    { label: "Out of stock", text: "Which items are unavailable right now?" },
+    { label: "Iceyoo options", text: "Show me the iceyoo options" },
+    { label: "Under RM12", text: "What menu items are under RM12?" },
+  ];
+  const faqPrompts = agentLabel === "Inventory Agent" ? INVENTORY_FAQ : KITCHEN_FAQ;
 
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -153,6 +170,21 @@ function DashboardChatBar({ agentLabel }) {
             ))}
             {loading && <div className="fm-chatpop-asst fm-chatpop-typing">…</div>}
           </div>
+        </div>
+      )}
+      {messages.length === 0 && !loading && (
+        <div className="fm-chatbar-faq">
+          {faqPrompts.map((q) => (
+            <button
+              key={q.text}
+              type="button"
+              className="fm-chatbar-chip"
+              onClick={() => send(q.text)}
+              disabled={loading}
+            >
+              {q.label}
+            </button>
+          ))}
         </div>
       )}
       <div className="fm-chatbar">

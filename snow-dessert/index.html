@@ -298,6 +298,37 @@
      of scroll. On desktop, offset by 260px sidebar so it centers in
      the main area; on mobile, full-width minus 12px padding.
   */
+  .fm-chatbar-faq {
+    position: fixed;
+    bottom: 80px;
+    left: 260px;
+    right: 0;
+    margin: 0 auto;
+    max-width: 680px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 14px;
+    z-index: 10;
+  }
+  .fm-chatbar-chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid #ffd0aa;
+    background: #fff8f0;
+    color: #c25500;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  }
+  .fm-chatbar-chip:hover:not(:disabled) { background: #fff0e0; }
+  .fm-chatbar-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+  @media (max-width: 768px) {
+    .fm-chatbar-faq { left: 12px; right: 12px; margin: 0; bottom: 76px; }
+  }
+
   .fm-chatbar {
     position: fixed;
     bottom: 20px;
