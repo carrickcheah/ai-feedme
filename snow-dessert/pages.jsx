@@ -236,7 +236,10 @@ function DashboardChatBar({ agentLabel, stats }) {
           </div>
         </div>
       )}
-      {messages.length === 0 && !loading && (
+      {/* FAQ chips stay visible across the whole session so the interviewer
+          can click through multiple demo prompts without resetting. Only
+          hide while a reply is in flight to prevent accidental double-sends. */}
+      {!loading && (
         <div className="fm-chatbar-faq">
           {faqPrompts.map((q) => (
             <button
