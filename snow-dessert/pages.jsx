@@ -222,9 +222,15 @@ function DashboardChatBar({ agentLabel, stats }) {
           </div>
           <div className="fm-chatpop-thread" ref={threadRef}>
             {messages.map((m, i) => (
-              <div key={i} className={m.role === "user" ? "fm-chatpop-user" : "fm-chatpop-asst"}>
-                {m.text}
-              </div>
+              m.role === "user" ? (
+                <div key={i} className="fm-chatpop-user">{m.text}</div>
+              ) : (
+                <div
+                  key={i}
+                  className="fm-chatpop-asst fm-md"
+                  dangerouslySetInnerHTML={renderMarkdownSafely(m.text || "")}
+                />
+              )
             ))}
             {loading && <div className="fm-chatpop-asst fm-chatpop-typing">…</div>}
           </div>
