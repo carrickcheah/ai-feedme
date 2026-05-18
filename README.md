@@ -174,18 +174,6 @@ push → runner → docker compose up --build → health check → live
 
 ---
 
-## Diagrams
-
-| Diagram | What it shows |
-|---|---|
-| [Master map](docs/chart_feedme_architecture.svg) | Full system at a glance |
-| [Agent flows](docs/chart_agent_flows.svg) | How a chat triggers each agent |
-| [Kitchen + Inventory flow](docs/chart_agent_flow_kitchen_inventory.svg) | The auto-reorder chain |
-| [Tool servers](docs/chart_mcp_servers.svg) | MCP servers, their tools, their databases |
-| [Memory flow](docs/chart_memgc_answer_flow.svg) | How customer facts are retrieved |
-
----
-
 ## License
 
 Apache 2.0 — built as a portfolio prototype; reuse anything useful.
