@@ -162,8 +162,8 @@ function ChatPanel({ open, onClose }) {
     }
   }, [open]);
 
-  const send = async () => {
-    const text = input.trim();
+  const send = async (overrideText) => {
+    const text = (typeof overrideText === "string" ? overrideText : input).trim();
     if (!text || loading) return;
     setInput("");
     setMessages((m) => [...m, { role: "user", text }]);
@@ -459,6 +459,47 @@ function ChatPanel({ open, onClose }) {
             </div>
           )}
         </div>
+
+        {/* FAQ chips — visible only on first turn, hidden once a user message is sent */}
+        {!messages.some((m) => m.role === "user") && !loading && (
+          <div
+            style={{
+              padding: "10px 12px 0",
+              background: "#fff",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+            }}
+          >
+            {[
+              { label: "Say hi", text: "hi" },
+              { label: "My last order", text: "what's my last order?" },
+              { label: "Cheese bingsu?", text: "can I get the cheese bingsu?" },
+              { label: "My usual", text: "I want my usual please" },
+              { label: "Refund my order", text: "refund my last order" },
+            ].map((q) => (
+              <button
+                key={q.text}
+                type="button"
+                onClick={() => send(q.text)}
+                disabled={loading}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  border: "1px solid #ffd0aa",
+                  background: "#fff8f0",
+                  color: "#c25500",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {q.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* input */}
         <div
