@@ -1,4 +1,4 @@
-# FeedMe — Promptfoo Eval Scenarios (30 tests)
+# Langfuse Observability
 
 ![Langfuse trace dashboard — live observability for every agent run](https://raw.githubusercontent.com/carrickcheah/ai-feedme/main/docs/image.png)
 
