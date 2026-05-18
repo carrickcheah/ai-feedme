@@ -236,7 +236,7 @@ function DashboardChatBar({ agentLabel, stats }) {
           </div>
         </div>
       )}
-      {messages.length === 0 && !loading && (
+      {!loading && (
         <div className="fm-chatbar-faq">
           {faqPrompts.map((q) => (
             <button
