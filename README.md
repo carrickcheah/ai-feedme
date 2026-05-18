@@ -4,7 +4,7 @@
 > Three agents collaborate over events and MCP tools to take orders, schedule the kitchen, and reorder inventory autonomously — with a real auto-86 chain wired end-to-end.
 
 **Live demo →** [`feedm.carrickcheah.com`](https://feedm.carrickcheah.com/)
-&nbsp;&nbsp;·&nbsp;&nbsp; **Stack** Bun · TypeScript · Hono · Azure GPT-5.5 · MCP · Kafka · Redis · OpenTelemetry · Langfuse · SQLite WAL · Docker · Caddy
+&nbsp;&nbsp;·&nbsp;&nbsp; **Stack** Bun · TypeScript · Hono · Azure GPT-5.5 · MCP · Kafka · Redis · Langfuse · SQLite WAL · Docker · Caddy
 &nbsp;&nbsp;·&nbsp;&nbsp; **Code** ~4.6k LOC TS + a Python sidecar
 &nbsp;&nbsp;·&nbsp;&nbsp; **Evals** 30 cases across happy-path / multi-turn / edge-cases / red-team
 &nbsp;&nbsp;·&nbsp;&nbsp; **CI/CD** Self-hosted runner, ~35s green deploys with auto-SSL
@@ -76,9 +76,9 @@ Kitchen and Inventory are not chat-driven — they're triggered by events. Their
 
 The chat endpoint emits OpenAI-streamed token deltas through a Hono SSE response (`event: chunk` / `event: done`). The frontend reads them with `response.body.getReader()` and renders Markdown progressively. First tokens visible in ~600ms; full reply in 2-4s.
 
-### Observability: OpenTelemetry → Langfuse Cloud
+### Observability: Langfuse Cloud
 
-Traces ship to **Langfuse Cloud** over its OTLP endpoint. Every LLM call, tool dispatch, and event fan-out is a span. We use OpenTelemetry directly (`@opentelemetry/sdk-node` + the OTLP HTTP exporter) instead of the `langfuse` npm SDK — point `LANGFUSE_BASE_URL` at Tempo, Honeycomb, or Phoenix to swap vendors with no code change. `import "./instrumentation"` is the **first** import in `src/index.ts` so the auto-instrumented OpenAI SDK is patched before any request fires.
+Every LLM call, tool dispatch, and event fan-out is traced and sent to **Langfuse Cloud**. Searchable, filterable, replayable.
 
 ### Memory as a retrieval pipeline, not a vector DB
 
@@ -108,7 +108,7 @@ Four MCP servers open the same set of SQLite files (`pos.db`, `kitchen-display.d
 | Memory | **MemGC PRISM** (Python sidecar) + **Redis** cache | Agentic retrieval over LM-friendly facts; cache hides cold-start |
 | Storage | **SQLite WAL** | One file per bounded context, concurrent reads |
 | MCP | **HTTP JSON-RPC** (not stdio) | Multiple servers concurrent, language-agnostic |
-| Observability | **OpenTelemetry → Langfuse Cloud** | Vendor-neutral, no SDK lock-in |
+| Observability | **Langfuse Cloud** | Every LLM call, tool, and event traced |
 | Edge | **Caddy** + Let's Encrypt | Auto-SSL via ACME HTTP-01, single-line reverse proxy |
 | CI/CD | **Self-hosted GitHub Actions runner** | No SSH, no billing, ~35s deploys |
 | Container | **Docker Compose** (5-service stack) | One file describes the whole topology |
