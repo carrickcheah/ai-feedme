@@ -231,4 +231,4 @@ A short tour for reviewers:
 
 ## License
 
-MIT — built as a portfolio project; reuse anything useful.
+Apache 2.0 — built as a portfolio prototype; reuse anything useful.
