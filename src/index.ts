@@ -18,6 +18,7 @@ import { env } from "./config/env";
 import { logger as log } from "./lib/logger";
 import { chatApp } from "./api/chat";
 import { adminApp } from "./api/admin";
+import { memgcAnswer } from "./memgc-client";
 
 const app = new Hono();
 
@@ -93,6 +94,18 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 
 // ── boot ────────────────────────────────────────────────────
 log.info({ port: env.PORT, env: env.NODE_ENV, restaurant: env.RESTAURANT_NAME }, "FeedMe app starting");
+
+// Pre-warm MemGC for the demo VIP (cust_sarah_001). Without this, the first
+// kiosk visitor pays the ~50s PRISM retrieval cost. We fire this without
+// awaiting so the server starts immediately; the cache populates in the
+// background within ~60s of boot.
+setTimeout(() => {
+  void memgcAnswer(
+    "What do you know about customer cust_sarah_001? Summarize their preferences, allergies, usual orders, loyalty tier.",
+  )
+    .then((r) => log.info({ memories: r.memories.length, cached: r.cached }, "[BOOT] MemGC pre-warm done"))
+    .catch((err) => log.warn({ err: String(err) }, "[BOOT] MemGC pre-warm failed (non-fatal)"));
+}, 2_000);
 
 export default {
   port: env.PORT,

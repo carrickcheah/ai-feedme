@@ -20,7 +20,7 @@ import { logger } from "./lib/logger";
 import { traced, addSpanAttrs } from "./lib/tracing";
 
 const MEMGC_URL = env.MEMGC_URL;
-const ANSWER_CACHE_TTL = 300; // 5 minutes
+const ANSWER_CACHE_TTL = 86_400; // 24 hours — customer profile facts rarely change
 
 // ── Redis (lazy, with graceful fallback) ────────────────────
 let _redis: Redis | null = null;
