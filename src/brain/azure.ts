@@ -1,27 +1,41 @@
 /**
- * Azure OpenAI GPT-5.5 client.
+ * LLM brain — DeepSeek primary, Azure GPT-5.5 fallback.
  *
- * Phase 1 Day 2: sync chat with tools support.
- * Phase 1+ adds streaming.
+ * Both providers expose the OpenAI Chat Completions API shape, so the call
+ * site is unchanged. We try DeepSeek first; on any error (network, 4xx, 5xx,
+ * timeout) we automatically retry with Azure using the same messages/tools.
  *
- * Reference: /Users/carrickcheah/Project/root_ai/z_API/API/AZURE_5-5.md
- *
- * GPT-5.5 quirks handled here:
- *  - `max_completion_tokens` not `max_tokens`
- *  - No custom temperature (always 1.0)
- *  - Supports `reasoning_effort` ("low" | "medium" | "high")
- *  - `tools` (functions) per the OpenAI spec
+ * Provider-specific quirks are isolated to the request builders:
+ *  - DeepSeek: standard openai-style request, `deepseek-v4-flash` model
+ *  - Azure GPT-5.5: max_completion_tokens (not max_tokens), no temperature,
+ *    optional reasoning_effort
  */
-import { AzureOpenAI } from "openai";
+import OpenAI, { AzureOpenAI } from "openai";
 import { env, type AgentName, agentConfig } from "../config/env";
 import { logger } from "../lib/logger";
 
-const client = new AzureOpenAI({
+const azureClient = new AzureOpenAI({
   endpoint: env.AZURE_OPENAI_ENDPOINT,
   apiKey: env.AZURE_OPENAI_API_KEY,
   apiVersion: env.AZURE_OPENAI_API_VERSION,
   deployment: env.AZURE_OPENAI_DEPLOYMENT,
 });
+
+// DeepSeek uses the OpenAI SDK with a custom baseURL.
+const deepseekClient = env.DEEPSEEK_API_KEY
+  ? new OpenAI({
+      baseURL: env.DEEPSEEK_BASE_URL,
+      apiKey: env.DEEPSEEK_API_KEY,
+      // Cap retries — we'll handle fallback to Azure ourselves rather than
+      // letting the SDK silently double the latency on transient errors.
+      maxRetries: 1,
+      timeout: 30_000,
+    })
+  : null;
+
+function deepseekAvailable(): boolean {
+  return deepseekClient !== null;
+}
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -81,27 +95,45 @@ export interface ChatOptions {
  *
  * Returns the same shape as chat() once the stream completes.
  */
-export async function chatStream(
+async function runChatStream(
+  provider: "deepseek" | "azure",
   options: ChatOptions,
   onContentChunk: (delta: string) => void,
 ): Promise<ChatResult> {
   const cfg = agentConfig(options.agent);
   const start = Date.now();
+  const model = provider === "deepseek" ? env.DEEPSEEK_MODEL : cfg.model;
 
-  const requestBody = {
-    model: cfg.model,
-    messages: options.messages,
-    max_completion_tokens: options.maxCompletionTokens ?? 2048,
-    stream: true,
-    stream_options: { include_usage: true },
-    ...(options.tools && options.tools.length > 0
-      ? { tools: options.tools, tool_choice: options.toolChoice ?? "auto" }
-      : {}),
-    ...(cfg.reasoning !== "none" ? { reasoning_effort: cfg.reasoning } : {}),
-  };
+  const requestBody = provider === "deepseek"
+    ? {
+        model,
+        messages: options.messages,
+        max_tokens: options.maxCompletionTokens ?? 2048,
+        stream: true,
+        stream_options: { include_usage: true },
+        // Explicitly disable DeepSeek's "thinking" / reasoning step — we want
+        // a direct answer with no hidden reasoning latency for the demo.
+        thinking: { type: "disabled" },
+        ...(options.tools && options.tools.length > 0
+          ? { tools: options.tools, tool_choice: options.toolChoice ?? "auto" }
+          : {}),
+      }
+    : {
+        model,
+        messages: options.messages,
+        max_completion_tokens: options.maxCompletionTokens ?? 2048,
+        stream: true,
+        stream_options: { include_usage: true },
+        ...(options.tools && options.tools.length > 0
+          ? { tools: options.tools, tool_choice: options.toolChoice ?? "auto" }
+          : {}),
+        ...(cfg.reasoning !== "none" ? { reasoning_effort: cfg.reasoning } : {}),
+      };
+
+  const activeClient = provider === "deepseek" ? deepseekClient! : azureClient;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stream = (await client.chat.completions.create(requestBody as any, {
+  const stream = (await activeClient.chat.completions.create(requestBody as any, {
     signal: options.abortSignal,
   })) as unknown as AsyncIterable<{
     choices?: Array<{
@@ -153,8 +185,9 @@ export async function chatStream(
   const duration = Date.now() - start;
   logger.info(
     {
+      provider,
       agent: options.agent,
-      model: cfg.model,
+      model,
       duration_ms: duration,
       input_tokens: usage?.prompt_tokens ?? 0,
       output_tokens: usage?.completion_tokens ?? 0,
@@ -163,14 +196,14 @@ export async function chatStream(
       streamed: true,
       output_preview: content.slice(0, 100),
     },
-    "[BRAIN] Azure GPT-5.5 stream done",
+    `[BRAIN] ${provider} stream done`,
   );
 
   return {
     output: content,
     tool_calls,
     finish_reason,
-    model: cfg.model,
+    model,
     usage: {
       input_tokens: usage?.prompt_tokens ?? 0,
       output_tokens: usage?.completion_tokens ?? 0,
@@ -181,35 +214,55 @@ export async function chatStream(
   };
 }
 
-export async function chat(options: ChatOptions): Promise<ChatResult> {
+/** Public streaming chat entry — tries DeepSeek first, falls back to Azure. */
+export async function chatStream(
+  options: ChatOptions,
+  onContentChunk: (delta: string) => void,
+): Promise<ChatResult> {
+  if (deepseekAvailable()) {
+    try {
+      return await runChatStream("deepseek", options, onContentChunk);
+    } catch (err) {
+      logger.warn(
+        { agent: options.agent, err: err instanceof Error ? err.message : String(err) },
+        "[BRAIN] DeepSeek stream failed — falling back to Azure GPT-5.5",
+      );
+    }
+  }
+  return runChatStream("azure", options, onContentChunk);
+}
+
+async function runChat(provider: "deepseek" | "azure", options: ChatOptions): Promise<ChatResult> {
   const cfg = agentConfig(options.agent);
   const start = Date.now();
+  const model = provider === "deepseek" ? env.DEEPSEEK_MODEL : cfg.model;
 
-  logger.debug(
-    {
-      agent: options.agent,
-      model: cfg.model,
-      reasoning: cfg.reasoning,
-      messages: options.messages.length,
-      tools: options.tools?.length ?? 0,
-    },
-    "[BRAIN] Azure GPT-5.5 call",
-  );
+  const requestBody = provider === "deepseek"
+    ? {
+        model,
+        messages: options.messages,
+        max_tokens: options.maxCompletionTokens ?? 2048,
+        // Hard-disable DeepSeek's thinking step — same direct-answer goal
+        // as setting reasoning_effort=none on GPT-5.5.
+        thinking: { type: "disabled" },
+        ...(options.tools && options.tools.length > 0
+          ? { tools: options.tools, tool_choice: options.toolChoice ?? "auto" }
+          : {}),
+      }
+    : {
+        model,
+        messages: options.messages,
+        max_completion_tokens: options.maxCompletionTokens ?? 2048,
+        ...(options.tools && options.tools.length > 0
+          ? { tools: options.tools, tool_choice: options.toolChoice ?? "auto" }
+          : {}),
+        ...(cfg.reasoning !== "none" ? { reasoning_effort: cfg.reasoning } : {}),
+      };
 
-  // GPT-5.5 quirks: max_completion_tokens, no temperature.
-  // The `openai` SDK types don't include reasoning_effort, so we use a permissive cast.
-  const requestBody = {
-    model: cfg.model,
-    messages: options.messages,
-    max_completion_tokens: options.maxCompletionTokens ?? 2048,
-    ...(options.tools && options.tools.length > 0
-      ? { tools: options.tools, tool_choice: options.toolChoice ?? "auto" }
-      : {}),
-    ...(cfg.reasoning !== "none" ? { reasoning_effort: cfg.reasoning } : {}),
-  };
+  const activeClient = provider === "deepseek" ? deepseekClient! : azureClient;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const completion = (await client.chat.completions.create(requestBody as any, {
+  const completion = (await activeClient.chat.completions.create(requestBody as any, {
     signal: options.abortSignal,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   })) as any;
@@ -236,8 +289,9 @@ export async function chat(options: ChatOptions): Promise<ChatResult> {
 
   logger.info(
     {
+      provider,
       agent: options.agent,
-      model: cfg.model,
+      model,
       duration_ms: duration,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
@@ -246,20 +300,30 @@ export async function chat(options: ChatOptions): Promise<ChatResult> {
       finish_reason: choice?.finish_reason,
       output_preview: output.slice(0, 100),
     },
-    "[BRAIN] Azure GPT-5.5 done",
+    `[BRAIN] ${provider} done`,
   );
 
   return {
     output,
     tool_calls,
     finish_reason: choice?.finish_reason ?? "unknown",
-    model: cfg.model,
-    usage: {
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      reasoning_tokens: reasoningTokens,
-      total_tokens: totalTokens,
-    },
+    model,
+    usage: { input_tokens: inputTokens, output_tokens: outputTokens, reasoning_tokens: reasoningTokens, total_tokens: totalTokens },
     duration_ms: duration,
   };
+}
+
+/** Public non-streaming chat entry — DeepSeek first, Azure fallback. */
+export async function chat(options: ChatOptions): Promise<ChatResult> {
+  if (deepseekAvailable()) {
+    try {
+      return await runChat("deepseek", options);
+    } catch (err) {
+      logger.warn(
+        { agent: options.agent, err: err instanceof Error ? err.message : String(err) },
+        "[BRAIN] DeepSeek failed — falling back to Azure GPT-5.5",
+      );
+    }
+  }
+  return runChat("azure", options);
 }

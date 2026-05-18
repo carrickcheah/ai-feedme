@@ -23,6 +23,11 @@ const EnvSchema = z.object({
   AZURE_REASONING_KITCHEN: z.enum(["none", "low", "medium", "high"]).default("none"),
   AZURE_REASONING_INVENTORY: z.enum(["none", "low", "medium", "high"]).default("none"),
 
+  // ── DeepSeek (primary LLM; falls back to Azure GPT-5.5 on any error) ──
+  DEEPSEEK_API_KEY: z.string().optional(),
+  DEEPSEEK_BASE_URL: z.string().default("https://api.deepseek.com"),
+  DEEPSEEK_MODEL: z.string().default("deepseek-v4-flash"),
+
   // ── Infra ──
   REDIS_URL: z.string().default("redis://localhost:6379"),
   KAFKA_BROKERS: z.string().default("localhost:9094"),
