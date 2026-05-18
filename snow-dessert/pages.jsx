@@ -102,12 +102,19 @@ function DashboardChatBar({ agentLabel, stats }) {
     if (!text || loading) return;
     setInput("");
     setMessages((m) => [...m, { role: "user", text }]);
+    setMessages((m) => [...m, { role: "assistant", text: "" }]);
     setOpen(true);
     setLoading(true);
+
+    // /api/chat/sync → /api/chat (SSE) — same streaming pattern as the
+    // customer-facing kiosk so dashboard replies trickle in token-by-token
+    // instead of arriving as a single blob after the LLM completes.
+    const STREAM_URL = CHAT_API_URL.replace(/\/sync$/, "");
+
     try {
-      const res = await fetch(CHAT_API_URL, {
+      const res = await fetch(STREAM_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
         body: JSON.stringify({
           message: text,
           session_id: sessionId,
@@ -115,12 +122,49 @@ function DashboardChatBar({ agentLabel, stats }) {
           customer_id: personaId,
         }),
       });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
-      if (data.session_id) setSessionId(data.session_id);
-      setMessages((m) => [...m, { role: "assistant", text: data.output || "(no response)" }]);
+      if (!res.ok || !res.body) throw new Error("HTTP " + res.status);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let currentEvent = "chunk";
+      let finalData = null;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() || "";
+        for (const part of parts) {
+          for (const line of part.split("\n")) {
+            if (line.startsWith("event:")) currentEvent = line.slice(6).trim();
+            else if (line.startsWith("data:")) {
+              const raw = line.slice(5).trim();
+              if (!raw) continue;
+              try {
+                const data = JSON.parse(raw);
+                if (currentEvent === "chunk" && data.delta) {
+                  setMessages((m) => {
+                    const next = [...m];
+                    const last = next[next.length - 1];
+                    next[next.length - 1] = { ...last, text: (last.text || "") + data.delta };
+                    return next;
+                  });
+                } else if (currentEvent === "done") finalData = data;
+              } catch { /* skip malformed */ }
+            }
+          }
+        }
+      }
+
+      if (finalData && finalData.session_id) setSessionId(finalData.session_id);
     } catch (err) {
-      setMessages((m) => [...m, { role: "assistant", text: "Connection error: " + (err.message || err) }]);
+      setMessages((m) => {
+        const next = [...m];
+        next[next.length - 1] = { role: "assistant", text: "Connection error: " + (err.message || err) };
+        return next;
+      });
     } finally {
       setLoading(false);
     }
