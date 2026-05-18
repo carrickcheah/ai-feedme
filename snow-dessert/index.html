@@ -323,6 +323,16 @@
     white-space: nowrap;
     box-shadow: 0 2px 6px rgba(0,0,0,0.04);
   }
+  /* FAQ chip row inside the chat popup — pinned at the bottom of the
+     thread so it stays visible after every answer */
+  .fm-chatpop-faq {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #f0e2cf;
+  }
   .fm-chatbar-chip:hover:not(:disabled) { background: #fff0e0; }
   .fm-chatbar-chip:disabled { opacity: 0.5; cursor: not-allowed; }
   @media (max-width: 768px) {
@@ -379,14 +389,11 @@
 
   .fm-chatpop {
     position: fixed;
-    /* Sit above the FAQ chip row (bottom: 80px, ~36px tall) plus the
-       chat input bar (bottom: 20px, ~40px tall). 140px leaves a clear
-       gap so chips stay clickable while the popup is open. */
-    bottom: 140px;
+    bottom: 88px;
     left: 50%;
     transform: translateX(-50%);
     width: min(900px, calc(100vw - 280px - 64px));
-    height: min(540px, calc(100vh - 200px));
+    height: min(560px, calc(100vh - 140px));
     background: #fff;
     border-radius: 16px;
     box-shadow: 0 12px 40px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.05);

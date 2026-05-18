@@ -233,6 +233,23 @@ function DashboardChatBar({ agentLabel, stats }) {
               )
             ))}
             {loading && <div className="fm-chatpop-asst fm-chatpop-typing">…</div>}
+            {/* FAQ chips rendered INSIDE the chat thread after the last
+                message — interviewer can click another prompt without
+                leaving the popup. Always visible (except while loading). */}
+            {!loading && (
+              <div className="fm-chatpop-faq">
+                {faqPrompts.map((q) => (
+                  <button
+                    key={q.text}
+                    type="button"
+                    className="fm-chatbar-chip"
+                    onClick={() => send(q.text)}
+                  >
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
