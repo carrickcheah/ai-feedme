@@ -150,3 +150,22 @@
     - type: llm-rubric
       transform: "output?.output ?? ''"
       value: "Suggests at least one cooling menu item (Iceyoo, Bingsu, or Ice Blended) with a brief reason. Stays on the IceYoo menu."
+
+# ─────────────────────────────────────────────────────────────
+# H-11: "my last order" uses list_recent_orders, no order_id loop
+# ─────────────────────────────────────────────────────────────
+- description: "H-11: 'my last order' uses list_recent_orders, not order_id loop"
+  vars:
+    message: "what is my last order?"
+    channel: "web"
+    customer_id: "cust_sarah_001"
+  assert:
+    - type: javascript
+      value: "output.success === true"
+    - type: javascript
+      value: "(output.tools_called || []).includes('pos__list_recent_orders')"
+    - type: javascript
+      value: "!(output.tools_called || []).includes('pos__get_order')"
+    - type: llm-rubric
+      transform: "output?.output ?? ''"
+      value: "Lists at least one prior order with items and total. Does NOT ask the customer to provide an order ID."

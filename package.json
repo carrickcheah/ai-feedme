@@ -19,7 +19,7 @@
     "infra:logs": "docker compose logs -f",
     "infra:reset": "docker compose down -v && docker compose up -d",
     "eval": "set -a && . ./.env && set +a && npx --no-install promptfoo eval --no-cache",
-    "eval:happy": "set -a && . ./.env && set +a && npx --no-install promptfoo eval -c evals/golden-set/happy-path.yaml --no-cache",
+    "eval:happy": "set -a && . ./.env && set +a && npx --no-install promptfoo eval -c promptfooconfig.yaml --filter-pattern '^H-' --no-cache",
     "eval:view": "npx --no-install promptfoo view"
   },
   "dependencies": {

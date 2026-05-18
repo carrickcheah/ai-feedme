@@ -1,7 +1,7 @@
 # FeedMe — Phase Detail
 
 > Detailed per-phase deliverables. Pair with `PLAN.md` (master index), `SCHEMAS.md` (data + APIs), `QUESTIONS.md` (open questions).
-> Reference architecture: `feedme_agent_architecture_v8.svg`.
+> Reference architecture: `docs/chart_feedme_agent_architecture_v8.svg`.
 
 Each phase below lists:
 
@@ -1063,7 +1063,7 @@ time curl -X POST http://localhost:8002/api/chat/sync \
 curl -X POST http://localhost:8003/dreaming -H 'Content-Type: application/json' -d '{"dry_run":true}' | jq
 
 # 5. check Langfuse
-open https://cloud.langfuse.com
+open https://us.cloud.langfuse.com
 # Verify: latest traces show the Sarah turn with full LLM + tool breakdown
 ```
 

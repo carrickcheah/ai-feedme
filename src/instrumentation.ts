@@ -31,7 +31,7 @@ let started = false;
 if (enabled) {
   const publicKey = process.env.LANGFUSE_PUBLIC_KEY;
   const secretKey = process.env.LANGFUSE_SECRET_KEY;
-  const baseUrl = process.env.LANGFUSE_BASE_URL ?? "https://cloud.langfuse.com";
+  const baseUrl = process.env.LANGFUSE_BASE_URL ?? "https://us.cloud.langfuse.com";
 
   if (!publicKey || !secretKey) {
     console.warn(

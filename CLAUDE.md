@@ -2,11 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Operating rules with this user
+
+**Do the work. Don't hand off manual steps.** The user has explicitly forbidden asking them to do clicks/manual setup in web UIs (Cloudflare, GitHub Secrets pages, AWS console, etc.). If a task needs a credential or API token, **find it first** (search existing `.env` files across sibling projects, check `gh auth status`, check `~/.cloudflared/`, check macOS keychain via `security find-generic-password`). Only ask the user as a last resort, and ask for the ONE specific thing needed (e.g. "paste your Cloudflare API token") rather than narrating navigation steps.
+
+Concretely: don't write things like "go to dash.cloudflare.com → click Add record → fill in...". Either do it via API/CLI, or request the one credential needed to do it via API/CLI.
+
 ## What this is
 
 A working **prototype for the FeedMe (MY/SG F&B SaaS) "Lead Agentic AI Engineer" interview demo**, NOT production code. Single-tenant, SQLite everywhere, web-only (no WhatsApp), built solo. Scope decisions are intentional — don't try to "fix" them by adding Postgres, multi-tenancy, or production hardening unless explicitly asked. See `docs/PLAN.md` for the locked decisions table.
 
-The target architecture is `feedme_agent_architecture_v8.svg` — every box in that SVG maps to existing code. New work should preserve that mapping.
+The target architecture is `docs/chart_feedme_agent_architecture_v8.svg` — every box in that SVG maps to existing code. New work should preserve that mapping.
 
 ## Commands
 

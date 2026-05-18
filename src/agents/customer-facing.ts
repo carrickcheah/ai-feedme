@@ -1,12 +1,8 @@
 /**
  * Customer-facing Agent — entry point for the FeedMe chat UI.
  *
- * Phase 2 Stage B: thin wrapper around agent-base. Adds:
- *  - In-process trigger to Kitchen Agent after a create_order tool call,
- *    so the multi-agent dance works end-to-end without Kafka.
- *  - Session history persistence in-memory (Phase 1+ moves to Redis).
- *
- * Phase 2 Stage C swaps the in-process trigger for a Kafka order.created publish.
+ * Thin wrapper around agent-base. Publishes order.created via Kafka
+ * (with in-process fallback) after a successful pos__create_order call.
  */
 import { ulid } from "ulid";
 import { runAgent } from "./agent-base";
@@ -36,7 +32,6 @@ export interface ChatResponse {
   error?: string;
 }
 
-// In-memory session store (Phase 3 moves to Redis).
 const sessions = new Map<string, ChatMessage[]>();
 const MAX_HISTORY = 20;
 
@@ -54,19 +49,15 @@ function buildSystemPrompt(channel: string, session_id: string, customer_id: str
  * and extract the (order_id, items) tuple. Used to trigger Kitchen in-process.
  */
 function extractCreatedOrder(toolsCalled: string[]): boolean {
-  // Phase 2 Stage B: we only flag that an order was created. The actual order details
-  // are pulled separately from pos.db (single tenant, single restaurant).
   return toolsCalled.includes("pos__create_order");
 }
 
 /**
- * Read the most-recent pending/confirmed order for this session — used to feed Kitchen.
- * Phase 2 Stage C will replace this with a Kafka envelope carrying the order data.
+ * Read the most-recent order for this session — used to build the order.created
+ * event payload. Queries pos.db directly rather than round-tripping through the
+ * POS MCP, since we have no order_id at this point.
  */
 async function fetchLatestOrderForSession(session_id: string): Promise<OrderCreatedEvent | null> {
-  // We use the POS MCP's get_order over HTTP — but we need an order_id first.
-  // Phase 2 Stage B simplification: query pos.db directly via the supplier-style read pattern.
-  // We'll use a tiny SQL helper inline for now.
   try {
     const { Database } = await import("bun:sqlite");
     const db = new Database("./data/pos.db", { readonly: true });

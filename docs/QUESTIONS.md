@@ -70,7 +70,7 @@ For cron schedules (daily owner summary at 9 AM local time).
 
 ### Q0.6 Does the plan match the SVG architecture?
 
-Each box from `feedme_agent_architecture_v8.svg`:
+Each box from `docs/chart_feedme_agent_architecture_v8.svg`:
 - Customer touchpoints (Kiosk · Mobile · Web) → Phase 1
 - Customer-facing Agent → Phase 1
 - Event bus (Kafka) → Phase 2

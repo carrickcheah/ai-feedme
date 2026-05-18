@@ -1,15 +1,10 @@
 /**
  * Agent base — shared multi-turn tool-calling loop.
  *
- * Each agent (customer-facing, kitchen, inventory) is a thin wrapper that:
- *  - Provides its system prompt + which MCP servers it can call
- *  - Optionally provides per-turn pre/post hooks (memory fetch, audit logging)
- *
- * The loop here handles: tool fetch, LLM call, tool dispatch, history,
- * cost accounting, error recovery.
- *
- * Phase 2 Stage B: extracted from customer-facing.ts.
- * Phase 3 will add memory hooks (MemGC) + skills loading.
+ * Each agent (customer-facing, kitchen, inventory) is a thin wrapper that
+ * supplies a system prompt + the MCP servers it's allowed to call. The
+ * loop here handles tool fetch, LLM call, tool dispatch, history,
+ * cost accounting, span instrumentation, and optional memory injection.
  */
 import { ulid } from "ulid";
 import { chat, chatStream, listTools, callTool, toOpenAITools, parsePrefixed } from "../brain";

@@ -25,6 +25,8 @@ import type {
 let kafkaClient: Kafka | null = null;
 let producer: Producer | null = null;
 let producerState: "idle" | "connecting" | "connected" | "failed" = "idle";
+let lastFailedAt = 0;
+const FAILED_COOLDOWN_MS = 30_000;
 
 function getKafka(): Kafka {
   if (!kafkaClient) {
@@ -40,12 +42,14 @@ function getKafka(): Kafka {
 
 async function tryGetProducer(): Promise<Producer | null> {
   if (producerState === "connected" && producer) return producer;
-  if (producerState === "failed") return null;
   if (producerState === "connecting") return null;
+  // Cooldown after a failure — retry every 30s instead of latching forever.
+  if (producerState === "failed" && Date.now() - lastFailedAt < FAILED_COOLDOWN_MS) {
+    return null;
+  }
   producerState = "connecting";
   try {
     const p = getKafka().producer({ allowAutoTopicCreation: true });
-    // Race against a 3s timeout — if Kafka isn't up, kafkajs hangs by default
     await Promise.race([
       p.connect(),
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error("Kafka connect timeout")), 3000)),
@@ -56,9 +60,10 @@ async function tryGetProducer(): Promise<Producer | null> {
     return p;
   } catch (err) {
     producerState = "failed";
+    lastFailedAt = Date.now();
     logger.warn(
-      { err: err instanceof Error ? err.message : String(err), brokers: env.KAFKA_BROKERS },
-      "[KAFKA] producer connect failed — events will fall back to in-process",
+      { err: err instanceof Error ? err.message : String(err), brokers: env.KAFKA_BROKERS, cooldown_ms: FAILED_COOLDOWN_MS },
+      "[KAFKA] producer connect failed — falling back to in-process; will retry after cooldown",
     );
     return null;
   }
@@ -78,6 +83,10 @@ interface PublishResult {
   /** true if delivered to Kafka; false if fell back to in-process */
   via_kafka: boolean;
   event_id: string;
+  /** true if delivery (Kafka send OR fallback handler) completed successfully */
+  ok: boolean;
+  /** Error message if the fallback handler threw. Empty on success. */
+  error?: string;
 }
 
 /**
@@ -97,7 +106,7 @@ async function publishOrFallback<T>(
     try {
       await p.send({ topic, messages: [{ value: JSON.stringify(e) }] });
       logger.info({ topic, event_id: e.event_id }, "[KAFKA] published");
-      return { via_kafka: true, event_id: e.event_id };
+      return { via_kafka: true, event_id: e.event_id, ok: true };
     } catch (err) {
       logger.warn(
         { topic, err: err instanceof Error ? err.message : String(err) },
@@ -105,16 +114,18 @@ async function publishOrFallback<T>(
       );
     }
   }
-  // Fallback: invoke in-process handler. Fire-and-forget; errors logged not thrown.
+  // Fallback: invoke in-process handler. Await so failures surface to caller.
   if (fallback) {
-    Promise.resolve()
-      .then(() => fallback(data))
-      .catch((err) =>
-        logger.error({ topic, err: String(err) }, "[FALLBACK] in-process handler failed"),
-      );
-    return { via_kafka: false, event_id: e.event_id };
+    try {
+      await fallback(data);
+      return { via_kafka: false, event_id: e.event_id, ok: true };
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+      logger.error({ topic, err: error }, "[FALLBACK] in-process handler failed");
+      return { via_kafka: false, event_id: e.event_id, ok: false, error };
+    }
   }
-  return { via_kafka: false, event_id: e.event_id };
+  return { via_kafka: false, event_id: e.event_id, ok: true };
 }
 
 // ── typed publishers ────────────────────────────────────────

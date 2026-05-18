@@ -1,12 +1,9 @@
 /**
  * Kitchen Agent — schedules tickets and decrements ingredient stock.
  *
- * Phase 2 Stage B: triggered by in-process call from customer-facing.ts.
- * Phase 2 Stage C: triggered by Kafka order.created consumer.
- *
- * The agent is not chat-driven — it's event-driven. A synthetic user message
- * describes the new order; the agent reasons about which tickets to fire and
- * which ingredients were consumed.
+ * Event-driven (woken by order.created via Kafka, or in-process fallback).
+ * A synthetic user message describes the new order; the agent decides which
+ * tickets to fire and which ingredients were consumed.
  */
 import { Database } from "bun:sqlite";
 import { runAgent } from "./agent-base";

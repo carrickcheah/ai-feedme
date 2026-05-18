@@ -64,7 +64,7 @@ const EnvSchema = z.object({
     .transform((v) => v.toLowerCase() === "true" || v === "1"),
   LANGFUSE_PUBLIC_KEY: z.string().optional(),
   LANGFUSE_SECRET_KEY: z.string().optional(),
-  LANGFUSE_BASE_URL: z.string().default("https://cloud.langfuse.com"),
+  LANGFUSE_BASE_URL: z.string().default("https://us.cloud.langfuse.com"),
 
   // ── Internal auth ──
   INTERNAL_SERVICE_SECRET: z.string().default("dev-secret"),

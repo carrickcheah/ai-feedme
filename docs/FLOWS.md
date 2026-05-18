@@ -1,7 +1,7 @@
 # FeedMe — Sequence Diagrams
 
 > ASCII sequence diagrams for the 6 most important request flows.
-> Pair with `feedme_agent_architecture_v8.svg` (static layers) and `PHASES.md` (build order).
+> Pair with `docs/chart_feedme_agent_architecture_v8.svg` (static layers) and `PHASES.md` (build order).
 >
 > **Reading hint**: `→` is a synchronous call/await; `⇢` is an async Kafka publish; `◀──` is a response/return.
 

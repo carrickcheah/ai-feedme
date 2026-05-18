@@ -1,6 +1,6 @@
 # FeedMe — Build Plan (v3, master index)
 
-> **Target architecture**: `feedme_agent_architecture_v8.svg` — every box mapped to a phase below.
+> **Target architecture**: `docs/chart_feedme_agent_architecture_v8.svg` — every box mapped to a phase below.
 > **Strategy**: lift code from `ai-contact-bun/ai_brain` (most), `ai-agents` (patterns), `memgc` (memory layer).
 > **Scope**: **prototype · single tenant · SQLite everywhere · web/mobile responsive only**.
 
@@ -61,7 +61,7 @@
 
 ## SVG ↔ Phase traceability
 
-Every box in `feedme_agent_architecture_v8.svg` maps to a phase deliverable. Nothing in the SVG is dropped; nothing in the plan is outside the SVG.
+Every box in `docs/chart_feedme_agent_architecture_v8.svg` maps to a phase deliverable. Nothing in the SVG is dropped; nothing in the plan is outside the SVG.
 
 | SVG element | Phase | Where in code |
 |---|---|---|
@@ -94,7 +94,7 @@ ai-feedme/
 ├── REUSE_AI_CONTACT_BUN.md       ← ai_brain lift map
 ├── REUSE_MEMGC.md                ← memgc integration
 ├── REUSE_OVERVIEW.md             ← cross-project synthesis
-├── feedme_agent_architecture_v8.svg   ← target diagram
+├── docs/chart_feedme_agent_architecture_v8.svg   ← target diagram
 │
 ├── docker-compose.yml            ← ✅ Phase 0: Redis + Kafka KRaft + memgc-service
 ├── docker-compose.prod.yml       ← Phase 5: production variant

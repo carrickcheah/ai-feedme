@@ -4,9 +4,6 @@
  * Triggered by Kafka (or in-process fallback) when an ingredient was used.
  * Decides whether to reorder based on stock vs par. If stock drops below par,
  * also publishes stock.low (which the propagator uses to 86 menu items).
- *
- * Phase 2 Stage D: LLM-driven for the demo wow factor, but the decision is
- * straightforward — could be code-only in a real prototype.
  */
 import { Database } from "bun:sqlite";
 import { runAgent } from "./agent-base";

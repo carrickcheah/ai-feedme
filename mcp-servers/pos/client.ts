@@ -367,7 +367,7 @@ export function createOrder(input: CreateOrderInput): CreateOrderResult {
 
   const subtotal = lines.reduce((s, l) => s + l.line_total_cents, 0);
   const tax_cents = 0; // SST disabled in prototype (env.SST_PERCENT = 0)
-  const discount_cents = 0; // combo discount logic — Phase 1+
+  const discount_cents = 0;
   const total_cents = subtotal + tax_cents - discount_cents;
 
   const tx = db.transaction(() => {

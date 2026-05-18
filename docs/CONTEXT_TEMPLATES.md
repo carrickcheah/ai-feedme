@@ -5,7 +5,7 @@
 > **`{{PLACEHOLDER}}`** = domain content you (user) provide.
 > Phase 1 ships files for `customer-facing/`. Phase 2 adds `kitchen/` and `inventory/`.
 >
-> Reference: `PHASES.md §1.2`, §2.2; `feedme_agent_architecture_v8.svg`.
+> Reference: `PHASES.md §1.2`, §2.2; `docs/chart_feedme_agent_architecture_v8.svg`.
 
 ---
 
