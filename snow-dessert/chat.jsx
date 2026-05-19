@@ -521,7 +521,7 @@ function ChatPanel({ open, onClose }) {
         {/* input */}
         <div
           style={{
-            padding: "12px 14px 18px",
+            padding: "12px 14px calc(18px + env(safe-area-inset-bottom))",
             borderTop: "1px solid #f0f0f0",
             background: "#fff",
             display: "flex",

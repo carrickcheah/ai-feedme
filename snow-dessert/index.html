@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>FeedMe — Agentic AI Prototype</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; }
@@ -341,7 +341,7 @@
 
   .fm-chatbar {
     position: fixed;
-    bottom: 20px;
+    bottom: calc(20px + env(safe-area-inset-bottom));
     left: 260px;
     right: 0;
     margin: 0 auto;
@@ -494,11 +494,11 @@
       left: 12px;
       right: 12px;
       max-width: none;
-      bottom: 14px;
+      bottom: calc(14px + env(safe-area-inset-bottom));
     }
     .fm-chatpop {
       width: calc(100vw - 24px);
-      bottom: 80px;
+      bottom: calc(80px + env(safe-area-inset-bottom));
       max-height: 55vh;
     }
     .fm-activity-row { grid-template-columns: 46px 64px 1fr; gap: 8px; }

@@ -679,10 +679,12 @@ function PromoBannerFeedVibe() {
 function SelectOrderCTA() {
   // Bottom CTA is back to a single full-width button — chat bubble moved
   // up into FloatingActions (top-right corner of the hero banner).
+  // env(safe-area-inset-bottom) keeps it clear of the phone's home-gesture
+  // bar / nav bar on real Android + iOS hardware.
   return (
     <div style={{
       position: 'sticky', bottom: 0, left: 0, right: 0,
-      padding: '12px 16px 20px',
+      padding: '12px 16px calc(20px + env(safe-area-inset-bottom))',
       background: 'linear-gradient(to top, rgba(255,255,255,0.97) 55%, rgba(255,255,255,0))',
       zIndex: 8,
     }}>
