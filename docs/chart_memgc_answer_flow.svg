@@ -25,7 +25,7 @@
 
   <!-- ── Title ─────────────────────────────────────────────────── -->
   <text x="440" y="36" text-anchor="middle" class="title">Memory Agents - answer()</text>
-  <text x="440" y="56" text-anchor="middle" class="subtitle">10–13 LLM calls per question. Local embedder + reranker handle the heavy lifting.</text>
+  <text x="440" y="56" text-anchor="middle" class="subtitle">Local embedder + reranker handle the heavy lifting; the LLM only orchestrates.</text>
 
   <!-- ── Legend ─────────────────────────────────────────────────── -->
   <g transform="translate(620,76)">
@@ -54,7 +54,7 @@
     <text x="20" y="44" class="boxS">Splits the question into 1–5 sub-questions. JSON output:</text>
     <text x="20" y="60" class="boxM">[{text, speakers, date_range}, …]</text>
     <rect x="380" y="14" width="80" height="22" rx="11" fill="#2d2275"/>
-    <text x="420" y="29" text-anchor="middle" class="badge">LLM × 1</text>
+    <text x="420" y="29" text-anchor="middle" class="badge">LLM step</text>
   </g>
   <line x1="420" y1="236" x2="420" y2="266" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#arr)"/>
 
@@ -63,7 +63,7 @@
     <rect width="720" height="186" rx="8" fill="#1e4633" stroke="#86c9aa"/>
     <text x="20" y="24" class="boxT">Step 2 · Recall (multi-stage funnel)</text>
     <rect x="620" y="14" width="80" height="22" rx="11" fill="#0f2a1f"/>
-    <text x="660" y="29" text-anchor="middle" class="badge">LLM × 0</text>
+    <text x="660" y="29" text-anchor="middle" class="badge">code only</text>
 
     <!-- Sub-stages -->
     <g transform="translate(20, 44)">
@@ -116,7 +116,7 @@
     <text x="20" y="24" class="boxT">Step 3 · Selector ⇔ Adder loop</text>
     <text x="20" y="42" class="boxS">Pick 5–25 memories from the 150-pool. Two rounds (early-exit Lever 1).</text>
     <rect x="600" y="14" width="100" height="22" rx="11" fill="#2d2275"/>
-    <text x="650" y="29" text-anchor="middle" class="badge">LLM × 2–4</text>
+    <text x="650" y="29" text-anchor="middle" class="badge">LLM loop</text>
 
     <!-- Round 1 -->
     <g transform="translate(20, 58)">
@@ -145,7 +145,7 @@
 
     <!-- Probe annotation -->
     <text x="20" y="155" class="annot">Adder can emit a probe query → fresh recall → new mems added to pool for Round 2</text>
-    <text x="20" y="174" class="annot">Lever 1: if keep_so_far unchanged after R1 → skip R2 (~2 LLM saved)</text>
+    <text x="20" y="174" class="annot">Lever 1: if keep_so_far unchanged after R1 → skip R2 (early-exit saves work)</text>
     <text x="20" y="198" class="annot" fill="#afa9ec" font-weight="700">Output: evidence = 5–25 memories</text>
   </g>
   <line x1="420" y1="704" x2="420" y2="734" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#arr)"/>
@@ -154,9 +154,9 @@
   <g transform="translate(60, 736)">
     <rect width="720" height="206" rx="8" fill="#4738a0" stroke="#afa9ec"/>
     <text x="20" y="24" class="boxT">Step 4 · Generator (N=7 self-consistency) + Vote</text>
-    <text x="20" y="42" class="boxS">Same evidence + question → 7 parallel LLM calls → cluster + pick.</text>
+    <text x="20" y="42" class="boxS">Same evidence + question → parallel candidate drafts → cluster + pick.</text>
     <rect x="600" y="14" width="100" height="22" rx="11" fill="#2d2275"/>
-    <text x="650" y="29" text-anchor="middle" class="badge">LLM × 7</text>
+    <text x="650" y="29" text-anchor="middle" class="badge">parallel</text>
 
     <!-- 7 parallel candidates -->
     <g transform="translate(40, 64)">
@@ -187,28 +187,28 @@
     <text x="20" y="24" class="boxT">Step 5 · Verifier (safety net)</text>
     <text x="20" y="42" class="boxS">Checks the Vote winner against 9 failure modes (truncated · date math · format · etc).</text>
     <rect x="600" y="14" width="100" height="22" rx="11" fill="#2d2275"/>
-    <text x="650" y="29" text-anchor="middle" class="badge">LLM × 0–1</text>
+    <text x="650" y="29" text-anchor="middle" class="badge">LLM check</text>
 
     <!-- 3 outcomes -->
     <g transform="translate(40, 70)">
       <rect width="180" height="76" rx="6" fill="#1e4633" stroke="#86c9aa" stroke-opacity="0.6"/>
       <text x="90" y="22" text-anchor="middle" class="boxT" font-size="12">PASS</text>
       <text x="90" y="40" text-anchor="middle" class="boxS" font-size="10">return answer · done</text>
-      <text x="90" y="60" text-anchor="middle" class="boxM" font-size="10">+0 LLM</text>
+      <text x="90" y="60" text-anchor="middle" class="boxM" font-size="10">pass</text>
     </g>
     <g transform="translate(260, 70)">
       <rect width="200" height="76" rx="6" fill="#5c4513" stroke="#e6a44e" stroke-opacity="0.6"/>
       <text x="100" y="22" text-anchor="middle" class="boxT" font-size="12">REGENERATE</text>
       <text x="100" y="40" text-anchor="middle" class="boxS" font-size="10">Generator runs once more</text>
       <text x="100" y="56" text-anchor="middle" class="boxS" font-size="10">with fix_hint from Verifier</text>
-      <text x="100" y="70" text-anchor="middle" class="boxM" font-size="10">+1 LLM</text>
+      <text x="100" y="70" text-anchor="middle" class="boxM" font-size="10">retry</text>
     </g>
     <g transform="translate(500, 70)">
       <rect width="180" height="76" rx="6" fill="#1e4633" stroke="#86c9aa" stroke-opacity="0.6"/>
       <text x="90" y="22" text-anchor="middle" class="boxT" font-size="12">SKIPPED · Lever 2</text>
       <text x="90" y="40" text-anchor="middle" class="boxS" font-size="10">7/7 unanimous → trust vote</text>
       <text x="90" y="56" text-anchor="middle" class="boxS" font-size="10">save ~6s + ~5K tokens</text>
-      <text x="90" y="70" text-anchor="middle" class="boxM" font-size="10">−1 LLM</text>
+      <text x="90" y="70" text-anchor="middle" class="boxM" font-size="10">skip</text>
     </g>
   </g>
   <line x1="420" y1="1154" x2="420" y2="1184" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#arr)"/>
@@ -223,7 +223,7 @@
   <!-- ── Bottom budget annotation ───────────────────────────────── -->
   <g transform="translate(60, 1254)">
     <rect width="760" height="44" rx="6" fill="#1a1a1a" stroke="#2a2a2a"/>
-    <text x="380" y="20" text-anchor="middle" class="boxT">LLM budget per question: 1 (Analyzer) + 2–4 (Selector⇔Adder) + 7 (Generator) + 0–1 (Verifier)</text>
-    <text x="380" y="36" text-anchor="middle" class="boxS"><tspan font-weight="700" fill="#F08531">Total: 10–13 LLM calls</tspan> · Generator runs in parallel ≈ one call's wall-time · Recall and Vote are zero-LLM</text>
+    <text x="380" y="20" text-anchor="middle" class="boxT">Pipeline: Analyzer → Selector ⇔ Adder → Generator → Verifier</text>
+    <text x="380" y="36" text-anchor="middle" class="boxS">Generator runs in parallel so it lands in roughly one call's wall-time. Recall and Vote are pure code — no LLM hop.</text>
   </g>
 </svg>
