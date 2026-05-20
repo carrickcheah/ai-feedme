@@ -63,7 +63,7 @@
   <line x1="380" y1="244" x2="380" y2="278" stroke="#F08531" stroke-width="1.8" marker-end="url(#ar4-o)"/>
   <g transform="translate(140, 280)">
     <rect width="480" height="58" rx="8" fill="#5c4513" stroke="#e6a44e"/>
-    <text x="240" y="22" text-anchor="middle" class="boxT">Event bus (Kafka · in-process fallback)</text>
+    <text x="240" y="22" text-anchor="middle" class="boxT">Event bus</text>
     <text x="240" y="42" text-anchor="middle" class="boxM">order.created · ingredient.consumed · stock.low · ticket.ready</text>
   </g>
 
@@ -222,7 +222,7 @@
   <g transform="translate(40, 786)">
     <rect width="1020" height="80" rx="6" fill="#1a1a1a" stroke="#2a2a2a"/>
     <text x="14" y="22" class="boxT" font-size="13">Stack at a glance</text>
-    <text x="14" y="42" class="boxM">TS · Bun · Hono · Azure GPT-5.5 · 4 HTTP MCP servers · SQLite WAL · Kafka KRaft (in-proc fallback) · Python memgc-service sidecar (FastAPI) · Redis · Langfuse OTLP · Promptfoo</text>
+    <text x="14" y="42" class="boxM">TS · Bun · Hono · DeepSeek (Azure GPT-5.5 fallback) · 4 HTTP MCP servers · SQLite WAL · Python memgc-service sidecar (FastAPI) · Redis · Langfuse OTLP · Promptfoo</text>
     <text x="14" y="64" class="boxS">Frontend: snow-dessert React kiosk (CDN Babel · no build step) · agent code reused from ai-contact-bun &amp; ai-agents</text>
   </g>
 </svg>
