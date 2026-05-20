@@ -57,21 +57,15 @@
     <text x="160" y="52" text-anchor="middle" class="boxM">/api/chat/sync</text>
   </g>
 
-  <!-- Tier 3 · Event bus -->
-  <text x="20" y="276" class="tierT">EVENT BUS</text>
-  <text x="386" y="266" class="annot" fill="#F08531">publishes order events</text>
-  <line x1="380" y1="244" x2="380" y2="278" stroke="#F08531" stroke-width="1.8" marker-end="url(#ar4-o)"/>
-  <g transform="translate(140, 280)">
-    <rect width="480" height="58" rx="8" fill="#5c4513" stroke="#e6a44e"/>
-    <text x="240" y="22" text-anchor="middle" class="boxT">Event bus</text>
-    <text x="240" y="42" text-anchor="middle" class="boxM">order.created · ingredient.consumed · stock.low · ticket.ready</text>
-  </g>
-
-  <!-- Two parallel triggers down -->
-  <line x1="250" y1="338" x2="250" y2="380" stroke="#F08531" stroke-width="1.8" marker-end="url(#ar4-o)"/>
-  <line x1="510" y1="338" x2="510" y2="380" stroke="#F08531" stroke-width="1.8" marker-end="url(#ar4-o)"/>
-  <text x="256" y="360" class="annot" font-size="10" fill="#F08531">wakes</text>
-  <text x="516" y="360" class="annot" font-size="10" fill="#F08531">wakes</text>
+  <!-- Customer-facing Agent triggers Kitchen + Inventory (mechanism abstracted away) -->
+  <!-- Single trunk drops down then forks left to Kitchen and right to Inventory -->
+  <line x1="380" y1="244" x2="380" y2="320" stroke="#F08531" stroke-width="1.8"/>
+  <text x="386" y="278" class="annot" fill="#F08531">triggers downstream agents</text>
+  <!-- Horizontal cross-bar -->
+  <line x1="250" y1="320" x2="530" y2="320" stroke="#F08531" stroke-width="1.8"/>
+  <!-- Two drops into Kitchen + Inventory -->
+  <line x1="250" y1="320" x2="250" y2="380" stroke="#F08531" stroke-width="1.8" marker-end="url(#ar4-o)"/>
+  <line x1="530" y1="320" x2="530" y2="380" stroke="#F08531" stroke-width="1.8" marker-end="url(#ar4-o)"/>
 
   <!-- Tier 4 · Event-driven agents -->
   <text x="20" y="396" class="tierT">EVENT-DRIVEN AGENTS</text>
