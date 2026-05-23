@@ -49,3 +49,6 @@ coverage/
 # Temporary
 *.tmp
 *.bak
+
+# Interview source notes (local working drafts, not deployed)
+animation/interview/
