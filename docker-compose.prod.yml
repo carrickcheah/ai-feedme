@@ -28,6 +28,7 @@ services:
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./snow-dessert:/srv/snow-dessert:ro
+      - ./animation:/srv/animation:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

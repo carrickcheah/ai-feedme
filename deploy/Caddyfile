@@ -64,5 +64,35 @@ feedm.carrickcheah.com {
   }
 }
 
+# ─────────────────────────────────────────────────────────────
+# build-agents-by-harness.carrickcheah.com
+#   Static-only site for the interview talk track (animation/).
+#   No backend — index.html + images/*.svg served as files.
+# ─────────────────────────────────────────────────────────────
+build-agents-by-harness.carrickcheah.com {
+  encode gzip zstd
+
+  root * /srv/animation
+  try_files {path} /index.html
+  file_server
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    -Server
+    Cache-Control "no-cache, no-store, must-revalidate"
+    Pragma "no-cache"
+    Expires "0"
+  }
+
+  log {
+    output stdout
+    format console
+    level INFO
+  }
+}
+
 # Optional: redirect bare apex / www to the canonical host
 # (skip if you don't own those records yet)

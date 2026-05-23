@@ -1,0 +1,240 @@
+<svg width="100%" viewBox="0 0 880 1060" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, system-ui, sans-serif">
+  <defs>
+    <marker id="m8-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#9c9a92" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="m8-ar-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#e07a7a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="m8-ar-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#86c9aa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="m8-ar-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#F08531" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      .title    { font-size: 18px; font-weight: 700; fill: #fff; }
+      .subtitle { font-size: 12px; fill: #b4b2a9; }
+      .secT     { font-size: 16px; font-weight: 700; fill: #fff; letter-spacing: 0.4px; }
+      .secS     { font-size: 11px; fill: rgba(255,255,255,0.78); }
+      .colT     { font-size: 15px; font-weight: 700; fill: #fff; letter-spacing: 0.3px; }
+      .boxT     { font-size: 14px; font-weight: 600; fill: #fff; }
+      .boxS     { font-size: 11px; fill: rgba(255,255,255,0.78); }
+      .boxM     { font-size: 11px; fill: rgba(255,255,255,0.82); font-family: ui-monospace, SFMono-Regular, monospace; }
+      .smT      { font-size: 11px; font-weight: 700; fill: #fff; }
+      .smS      { font-size: 9px; fill: rgba(255,255,255,0.72); }
+      .lbl      { font-size: 10px; font-weight: 700; fill: #c2c0b6; letter-spacing: 0.14em; text-transform: uppercase; }
+      .barIn    { font-size: 11px; font-weight: 700; fill: #0f0f0f; }
+      .barOut   { font-size: 11px; font-weight: 600; fill: #e7e4de; }
+      .verdictR { font-size: 13px; font-weight: 700; fill: #e07a7a; letter-spacing: 0.2px; }
+      .verdictG { font-size: 13px; font-weight: 700; fill: #86c9aa; letter-spacing: 0.2px; }
+      .annot    { font-size: 11px; fill: #c2c0b6; }
+    </style>
+  </defs>
+
+  <!-- Dark canvas (matches 003 / 005 palette) -->
+  <rect width="880" height="1060" fill="#0f0f0f"/>
+
+  <!-- ── Title ───────────────────────────────────────────────────── -->
+  <text x="440" y="34" text-anchor="middle" class="title">Runtime Cost · Pure MCP vs Hybrid</text>
+  <text x="440" y="54" text-anchor="middle" class="subtitle">Tools live in the system prompt — every turn pays for every schema, used or not</text>
+
+  <!-- ── Principle slate ─────────────────────────────────────────── -->
+  <g transform="translate(40, 76)">
+    <rect width="800" height="68" rx="8" fill="#1a1a1a" stroke="#2a2a2a"/>
+    <text x="20" y="26" class="boxT">The hidden tax</text>
+    <text x="20" y="46" class="boxS">Every MCP tool schema sits in the system prompt. The LLM sees them on EVERY turn — even when it calls zero.</text>
+    <text x="20" y="62" class="boxS">100 tools ≈ <tspan font-weight="700" fill="#F08531">15K input tokens / reply</tspan> · paid forever · adds latency to every TTFT.</text>
+  </g>
+
+  <!-- ── SECTION 1 · PURE MCP vs HYBRID ──────────────────────────── -->
+  <g transform="translate(40, 160)">
+    <rect width="800" height="44" rx="8" fill="#FF7518"/>
+    <text x="16" y="28" class="secT">PURE MCP  vs  HYBRID</text>
+    <text x="780" y="28" text-anchor="end" class="secS">same capability · very different cost profile</text>
+  </g>
+
+  <!-- ═══ LEFT COLUMN · PURE MCP ═══ -->
+  <g transform="translate(40, 220)">
+    <rect width="380" height="460" rx="10" fill="#1a1a1a" stroke="#e07a7a" stroke-opacity="0.5"/>
+    <!-- Header strip (top corners rounded via outer rx + flat overlay) -->
+    <rect x="0" y="0" width="380" height="40" rx="10" fill="#4a1f1f"/>
+    <rect x="0" y="30" width="380" height="10" fill="#4a1f1f"/>
+    <text x="16" y="26" class="colT">PURE MCP — pay for the buffet</text>
+
+    <!-- Architecture label -->
+    <text x="16" y="62" class="lbl">Architecture</text>
+
+    <!-- Agent box -->
+    <g transform="translate(16, 70)">
+      <rect width="348" height="38" rx="6" fill="#4738a0" stroke="#afa9ec"/>
+      <text x="14" y="18" class="boxT" font-size="13">Customer Service Agent</text>
+      <text x="14" y="32" class="boxS" font-size="10">one LLM session · receives ALL tools every turn</text>
+    </g>
+
+    <!-- Down arrow -->
+    <line x1="190" y1="110" x2="190" y2="124" stroke="#e07a7a" stroke-width="1.5" marker-end="url(#m8-ar-r)"/>
+
+    <!-- 5 MCP server boxes in a row -->
+    <g transform="translate(16, 128)">
+      <g transform="translate(0, 0)">
+        <rect width="66" height="46" rx="5" fill="#1e4633" stroke="#86c9aa" stroke-opacity="0.55"/>
+        <text x="33" y="20" text-anchor="middle" class="smT">POS</text>
+        <text x="33" y="34" text-anchor="middle" class="smS">20 tools</text>
+      </g>
+      <g transform="translate(71, 0)">
+        <rect width="66" height="46" rx="5" fill="#1e4633" stroke="#86c9aa" stroke-opacity="0.55"/>
+        <text x="33" y="20" text-anchor="middle" class="smT">KDS</text>
+        <text x="33" y="34" text-anchor="middle" class="smS">20 tools</text>
+      </g>
+      <g transform="translate(142, 0)">
+        <rect width="66" height="46" rx="5" fill="#1e4633" stroke="#86c9aa" stroke-opacity="0.55"/>
+        <text x="33" y="20" text-anchor="middle" class="smT">Payment</text>
+        <text x="33" y="34" text-anchor="middle" class="smS">20 tools</text>
+      </g>
+      <g transform="translate(213, 0)">
+        <rect width="66" height="46" rx="5" fill="#1e4633" stroke="#86c9aa" stroke-opacity="0.55"/>
+        <text x="33" y="20" text-anchor="middle" class="smT">Supplier</text>
+        <text x="33" y="34" text-anchor="middle" class="smS">20 tools</text>
+      </g>
+      <g transform="translate(284, 0)">
+        <rect width="66" height="46" rx="5" fill="#1e4633" stroke="#86c9aa" stroke-opacity="0.55"/>
+        <text x="33" y="20" text-anchor="middle" class="smT">Auth</text>
+        <text x="33" y="34" text-anchor="middle" class="smS">20 tools</text>
+      </g>
+    </g>
+
+    <!-- Math note -->
+    <text x="16" y="200" class="boxM">5 servers × 20 tools = 100 schemas in prompt</text>
+
+    <!-- Cost bar -->
+    <text x="16" y="230" class="lbl">Input cost / turn</text>
+    <rect x="16" y="238" width="348" height="22" rx="5" fill="#2a2a2a"/>
+    <rect x="16" y="238" width="328" height="22" rx="5" fill="#e07a7a"/>
+    <text x="180" y="254" text-anchor="middle" class="barIn">≈ 15,000 tokens · every turn</text>
+
+    <!-- Latency bar -->
+    <text x="16" y="284" class="lbl">Latency (TTFT)</text>
+    <rect x="16" y="292" width="348" height="22" rx="5" fill="#2a2a2a"/>
+    <rect x="16" y="292" width="262" height="22" rx="5" fill="#e07a7a" fill-opacity="0.78"/>
+    <text x="140" y="308" text-anchor="middle" class="barIn">slower — heavy prompt</text>
+
+    <!-- The math -->
+    <text x="16" y="342" class="lbl">The math</text>
+    <text x="16" y="360" class="boxM">~150 tok / schema  ×  100  =  ~15K in</text>
+    <text x="16" y="376" class="boxM">× 500 replies / day  ≈  7.5M tokens / day</text>
+
+    <!-- Verdict -->
+    <text x="16" y="416" class="verdictR">Verdict · pay for the buffet, use one dish</text>
+    <text x="16" y="436" class="boxS">Every reply ships the full menu — even when the model calls one tool.</text>
+  </g>
+
+  <!-- ═══ RIGHT COLUMN · HYBRID ═══ -->
+  <g transform="translate(460, 220)">
+    <rect width="380" height="460" rx="10" fill="#1a1a1a" stroke="#86c9aa" stroke-opacity="0.5"/>
+    <!-- Header strip -->
+    <rect x="0" y="0" width="380" height="40" rx="10" fill="#1e4633"/>
+    <rect x="0" y="30" width="380" height="10" fill="#1e4633"/>
+    <text x="16" y="26" class="colT">HYBRID — right tool, right caller</text>
+
+    <!-- Architecture label -->
+    <text x="16" y="62" class="lbl">Architecture</text>
+
+    <!-- Two agent boxes side by side -->
+    <g transform="translate(16, 70)">
+      <rect width="168" height="38" rx="6" fill="#4738a0" stroke="#afa9ec"/>
+      <text x="14" y="18" class="boxT" font-size="12">Admin Agent</text>
+      <text x="14" y="32" class="boxS" font-size="10">Code Mode (bash)</text>
+    </g>
+    <g transform="translate(196, 70)">
+      <rect width="168" height="38" rx="6" fill="#4738a0" stroke="#afa9ec"/>
+      <text x="14" y="18" class="boxT" font-size="12">Customer Agent</text>
+      <text x="14" y="32" class="boxS" font-size="10">MCP (curated)</text>
+    </g>
+
+    <!-- Down arrows -->
+    <line x1="100" y1="110" x2="100" y2="124" stroke="#86c9aa" stroke-width="1.5" marker-end="url(#m8-ar-g)"/>
+    <line x1="280" y1="110" x2="280" y2="124" stroke="#86c9aa" stroke-width="1.5" marker-end="url(#m8-ar-g)"/>
+
+    <!-- Tool boxes (one per agent) -->
+    <g transform="translate(16, 128)">
+      <rect width="168" height="46" rx="5" fill="#143324" stroke="#86c9aa" stroke-opacity="0.55"/>
+      <text x="14" y="22" class="smT" font-size="12">$ bash command</text>
+      <text x="14" y="38" class="smS" font-size="10">1 tool · composes any CLI / SQL</text>
+    </g>
+    <g transform="translate(196, 128)">
+      <rect width="168" height="46" rx="5" fill="#143324" stroke="#86c9aa" stroke-opacity="0.55"/>
+      <text x="14" y="22" class="smT" font-size="12">1 MCP server</text>
+      <text x="14" y="38" class="smS" font-size="10">~20 curated, typed tools</text>
+    </g>
+
+    <!-- Math note -->
+    <text x="16" y="200" class="boxM">admin: 1 tool  ·  customer: 20 tools (one server)</text>
+
+    <!-- Cost bar -->
+    <text x="16" y="230" class="lbl">Input cost / turn</text>
+    <rect x="16" y="238" width="348" height="22" rx="5" fill="#2a2a2a"/>
+    <rect x="16" y="238" width="68" height="22" rx="5" fill="#86c9aa"/>
+    <text x="94" y="254" class="barOut">≈ 3,000 tokens  (customer · admin only ~200)</text>
+
+    <!-- Latency bar -->
+    <text x="16" y="284" class="lbl">Latency (TTFT)</text>
+    <rect x="16" y="292" width="348" height="22" rx="5" fill="#2a2a2a"/>
+    <rect x="16" y="292" width="102" height="22" rx="5" fill="#86c9aa" fill-opacity="0.85"/>
+    <text x="128" y="308" class="barOut">faster — lighter prompt</text>
+
+    <!-- The math -->
+    <text x="16" y="342" class="lbl">The math</text>
+    <text x="16" y="360" class="boxM">admin ~200 tok  ·  customer ~3K tok / turn</text>
+    <text x="16" y="376" class="boxM">≈ <tspan font-weight="700" fill="#86c9aa">80% less input</tspan> per reply  ·  ~5× faster TTFT</text>
+
+    <!-- Verdict -->
+    <text x="16" y="416" class="verdictG">Verdict · pay only for what THIS caller needs</text>
+    <text x="16" y="436" class="boxS">Power user → bash (any CLI) · guided caller → typed MCP tools.</text>
+  </g>
+
+  <!-- ── SECTION 2 · WHY HYBRID ──────────────────────────────────── -->
+  <g transform="translate(40, 700)">
+    <rect width="800" height="44" rx="8" fill="#FF7518"/>
+    <text x="16" y="28" class="secT">WHY HYBRID — right tool for the right caller</text>
+    <text x="780" y="28" text-anchor="end" class="secS">capability is the same · how you EXPOSE it is the lever</text>
+  </g>
+
+  <!-- Three principle boxes -->
+  <g transform="translate(40, 760)">
+    <rect width="256" height="160" rx="8" fill="#4738a0" stroke="#afa9ec"/>
+    <text x="20" y="26" class="boxT">Admin = power user</text>
+    <text x="20" y="50" class="boxS">Already knows what to do.</text>
+    <text x="20" y="66" class="boxS">Gives intent → bash composes.</text>
+    <text x="20" y="100" class="boxM">$ bash → cli → sql → reply</text>
+    <text x="20" y="116" class="boxM">one tool, unlimited reach</text>
+    <text x="20" y="146" class="verdictG" fill="#afa9ec">Cost: ~1 tool schema</text>
+  </g>
+  <g transform="translate(312, 760)">
+    <rect width="256" height="160" rx="8" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="20" y="26" class="boxT">Customer = guided</text>
+    <text x="20" y="50" class="boxS">Doesn't know your schema.</text>
+    <text x="20" y="66" class="boxS">MCP gives discoverability + types.</text>
+    <text x="20" y="100" class="boxM">curated · typed · validated</text>
+    <text x="20" y="116" class="boxM">guardrails in code, not prompt</text>
+    <text x="20" y="146" class="verdictG">Cost: 1 curated server</text>
+  </g>
+  <g transform="translate(584, 760)">
+    <rect width="256" height="160" rx="8" fill="#5c4513" stroke="#e6a44e"/>
+    <text x="20" y="26" class="boxT">Different agent, different budget</text>
+    <text x="20" y="50" class="boxS">Don't ship one super-prompt.</text>
+    <text x="20" y="66" class="boxS">Each agent sees only its tools.</text>
+    <text x="20" y="100" class="boxM">admin ≠ customer prompt</text>
+    <text x="20" y="116" class="boxM">different tool budgets per role</text>
+    <text x="20" y="146" class="verdictG" fill="#e6a44e">Cost: minimal both sides</text>
+  </g>
+
+  <!-- ── Bottom insight ──────────────────────────────────────────── -->
+  <g transform="translate(40, 940)">
+    <rect width="800" height="100" rx="6" fill="#1a1a1a" stroke="#2a2a2a"/>
+    <text x="400" y="26" text-anchor="middle" class="boxT" font-size="13">Capability is free · exposure is not</text>
+    <text x="400" y="48" text-anchor="middle" class="boxS">Pure MCP front-loads every schema on every turn · Hybrid sends only what THIS agent needs.</text>
+    <text x="400" y="66" text-anchor="middle" class="boxS">Same coverage · ~80% lower per-reply input · faster TTFT · cleaner guardrail boundary.</text>
+    <text x="400" y="88" text-anchor="middle" class="annot">In ai-contact-bun: admin core agent uses Code Mode (bash); customer service agent uses curated MCP.</text>
+  </g>
+</svg>
