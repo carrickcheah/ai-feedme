@@ -362,16 +362,16 @@
       ],
       killer: "Agent = Model + Context. Multiple agents = multiple context bundles." },
 
-    { n: 3, tier: "A", name: "Control Flow", q: "Should the agent act, ask, retry, or stop?",
-      image: "images/003.svg",
-      imageAlt: "Control flow diagram — 6 cheap gates before the LLM, bounded loop inside, with the four decisions (Act / Ask / Retry / Stop) summarized at the bottom",
-      simple: "The decision logic around the agent loop — when to invoke the model, when to call a tool, when to retry, when to stop. Front-loaded: cheap deterministic checks first, the expensive non-deterministic LLM last.",
+    { n: 3, tier: "A", name: "Memory", q: "What carries between steps and sessions?",
+      image: "images/005.svg",
+      imageAlt: "Memory agent pipeline — Analyzer (LLM) → Recall funnel (code-only: entity → SQL → vec+BM25/RRF → reranker, ~1000 → top 150) → Selector⇔Adder LLM loop → Generator ×7 + clustering vote → Verifier (9 failure modes) → Answer",
+      simple: "Without memory the agent is a goldfish. Memory lets it remember the patient across a conversation and across days. Two parts: WHERE (tiered storage) and HOW (a memory agent).",
       how: [
-        "6 gates run BEFORE the LLM (self-msg, validation, dedup, lock, human-check, credit-gate) → reject most work cheaply.",
-        "The agent loop is bounded: 20-turn cap + 2-min timeout + isolation hard-abort.",
-        "Fire-and-forget 202 — the webhook returns instantly, the agent works in the background."
+        "Tiered: SQLite+vec (hot, local), Postgres (relational truth — joins, transactions), Qdrant (semantic scale).",
+        "A dedicated memory agent retrieves it: Analyzer → Recall → Selector ⇔ Adder → Generator ×7 + Vote → Verifier.",
+        "Recall and voting cost ZERO LLM tokens; a verifier guards the final answer against 9 failure modes."
       ],
-      killer: "Most of my control flow runs before the model: cheap deterministic checks first, the expensive model last." },
+      killer: "Heavy lifting is done by the local embedder + reranker — the LLM only orchestrates." },
 
     { n: 4, tier: "A", name: "Guardrails", q: "What is the agent forbidden to do?",
       image: "images/004.svg",
@@ -384,16 +384,16 @@
       ],
       killer: "The AI can ask. It cannot decide. Code holds the lock, not the prompt." },
 
-    { n: 5, tier: "A", name: "Memory", q: "What carries between steps and sessions?",
-      image: "images/005.svg",
-      imageAlt: "Memory agent pipeline — Analyzer (LLM) → Recall funnel (code-only: entity → SQL → vec+BM25/RRF → reranker, ~1000 → top 150) → Selector⇔Adder LLM loop → Generator ×7 + clustering vote → Verifier (9 failure modes) → Answer",
-      simple: "Without memory the agent is a goldfish. Memory lets it remember the patient across a conversation and across days. Two parts: WHERE (tiered storage) and HOW (a memory agent).",
+    { n: 5, tier: "A", name: "Control Flow", q: "Should the agent act, ask, retry, or stop?",
+      image: "images/003.svg",
+      imageAlt: "Control flow diagram — 6 cheap gates before the LLM, bounded loop inside, with the four decisions (Act / Ask / Retry / Stop) summarized at the bottom",
+      simple: "The decision logic around the agent loop — when to invoke the model, when to call a tool, when to retry, when to stop. Front-loaded: cheap deterministic checks first, the expensive non-deterministic LLM last.",
       how: [
-        "Tiered: SQLite+vec (hot, local), Postgres (relational truth — joins, transactions), Qdrant (semantic scale).",
-        "A dedicated memory agent retrieves it: Analyzer → Recall → Selector ⇔ Adder → Generator ×7 + Vote → Verifier.",
-        "Recall and voting cost ZERO LLM tokens; a verifier guards the final answer against 9 failure modes."
+        "6 gates run BEFORE the LLM (self-msg, validation, dedup, lock, human-check, credit-gate) → reject most work cheaply.",
+        "The agent loop is bounded: 20-turn cap + 2-min timeout + isolation hard-abort.",
+        "Fire-and-forget 202 — the webhook returns instantly, the agent works in the background."
       ],
-      killer: "Heavy lifting is done by the local embedder + reranker — the LLM only orchestrates." },
+      killer: "Most of my control flow runs before the model: cheap deterministic checks first, the expensive model last." },
 
     { n: 6, tier: "B", name: "Reliability", q: "What happens when a step fails?",
       table: {
