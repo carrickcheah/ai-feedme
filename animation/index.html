@@ -455,11 +455,13 @@
       killer: "Risk isn't hardcoded — it's a per-tenant policy with a non-downgradable floor." },
 
     { n: 10, tier: "B", name: "Evaluation", q: "How do I know the answers are correct?",
-      diagram:
-        "Staging (offline)    → promptfoo  → golden tests · regression · red-team · model compare\n" +
-        "Production (online)  → custom     → live reply sampling · CSAT · inline verifier\n" +
-        "\n" +
-        "Grade by: 📏 exact / keyword (instant)  ·  🧠 LLM-as-judge (fast)  ·  👤 human (gold)",
+      table: {
+        headers: ["Stage", "Tool", "Checks"],
+        rows: [
+          ["Staging (offline)", "promptfoo", "golden tests · regression · red-team · model compare"],
+          ["Production (online)", "custom", "live reply sampling · CSAT · inline verifier"]
+        ]
+      },
       simple: "Testing if the AI's answers are correct, like giving a student an exam. My honest weak spot — and a roadmap.",
       how: [
         "Staging (offline) via promptfoo: golden tests, regression, red-team, model comparison — runs in CI.",
