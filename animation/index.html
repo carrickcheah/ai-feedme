@@ -337,18 +337,7 @@
 
 <script>
   const CARDS = [
-    { n: 1, tier: "A", name: "Tools", q: "What can the agent do?",
-      image: "images/001.png",
-      imageAlt: "Admin Core Agent — Skills tab showing tools as skill definitions",
-      simple: "Tools are the model's hands (act) and eyes (read). A brain with no tools can only talk — and will hallucinate, because it can't reach real data.",
-      how: [
-        "MCP tools (strict schema) for the customer-facing agent; Code Mode (flexible) for the admin agent — trust-tiered.",
-        "Code Mode collapsed 23 MCP tools into 2 (api_search + api_execute) → ~60% fewer input tokens.",
-        "A skill REFERENCES a tool — the skill is the recipe, the tool is the callable."
-      ],
-      killer: "Tools give the model hands. Harness engineering decides what those hands are allowed to touch." },
-
-    { n: 2, tier: "A", name: "Context", q: "What does the agent see this step?",
+    { n: 1, tier: "A", name: "Context", q: "What does the agent see this step?",
       image: "images/002.png",
       imageAlt: "Awesome Healthcare tenant — 2 built-in agents + 7 custom agents, each a distinct context bundle",
       diagram:
@@ -361,6 +350,17 @@
         "Demo tenant: Awesome Healthcare (synthetic data) — context is scoped per-tenant."
       ],
       killer: "Agent = Model + Context. Multiple agents = multiple context bundles." },
+
+    { n: 2, tier: "A", name: "Tools", q: "What can the agent do?",
+      image: "images/001.png",
+      imageAlt: "Admin Core Agent — Skills tab showing tools as skill definitions",
+      simple: "Tools are the model's hands (act) and eyes (read). A brain with no tools can only talk — and will hallucinate, because it can't reach real data.",
+      how: [
+        "MCP tools (strict schema) for the customer-facing agent; Code Mode (flexible) for the admin agent — trust-tiered.",
+        "Code Mode collapsed 23 MCP tools into 2 (api_search + api_execute) → ~60% fewer input tokens.",
+        "A skill REFERENCES a tool — the skill is the recipe, the tool is the callable."
+      ],
+      killer: "Tools give the model hands. Harness engineering decides what those hands are allowed to touch." },
 
     { n: 3, tier: "A", name: "Memory", q: "What carries between steps and sessions?",
       image: "images/005.svg",
