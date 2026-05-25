@@ -1,0 +1,211 @@
+<svg width="100%" viewBox="0 0 880 1660" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, system-ui, sans-serif">
+  <defs>
+    <marker id="cf-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#9c9a92" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="cf-ar-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#F08531" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="cf-ar-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#e07a7a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      .title    { font-size: 18px; font-weight: 700; fill: #fff; }
+      .subtitle { font-size: 12px; fill: #b4b2a9; }
+      .secT     { font-size: 16px; font-weight: 700; fill: #fff; letter-spacing: 0.4px; }
+      .secS     { font-size: 11px; fill: rgba(255,255,255,0.78); }
+      .boxT     { font-size: 14px; font-weight: 600; fill: #fff; }
+      .boxS     { font-size: 11px; fill: rgba(255,255,255,0.72); }
+      .boxM     { font-size: 11px; fill: rgba(255,255,255,0.82); font-family: ui-monospace, SFMono-Regular, monospace; }
+      .exitT    { font-size: 11px; font-weight: 600; fill: #fff; }
+      .exitM    { font-size: 11px; fill: rgba(255,255,255,0.82); font-family: ui-monospace, SFMono-Regular, monospace; }
+      .badge    { font-size: 10px; font-weight: 700; fill: #fff; letter-spacing: 0.04em; }
+      .annot    { font-size: 11px; fill: #c2c0b6; }
+      .annotM   { font-size: 11px; fill: #c2c0b6; font-family: ui-monospace, SFMono-Regular, monospace; }
+      .legendT  { font-size: 10px; font-weight: 700; fill: #c2c0b6; letter-spacing: 0.08em; }
+      .legendL  { font-size: 11px; fill: #b4b2a9; }
+      .decisionK { font-size: 13px; font-weight: 700; fill: #F08531; font-family: ui-monospace, SFMono-Regular, monospace; }
+      .decisionV { font-size: 12px; fill: #e7e4de; }
+    </style>
+  </defs>
+
+  <!-- Dark canvas -->
+  <rect width="880" height="1660" fill="#0f0f0f"/>
+
+  <!-- ── Title ───────────────────────────────────────────────────── -->
+  <text x="440" y="34" text-anchor="middle" class="title">Booking Reminders · Outbound by BR · Replies by CS</text>
+  <text x="440" y="54" text-anchor="middle" class="subtitle">Same WhatsApp number · two origins · BR sends on cron · CS owns the conversation</text>
+
+  <!-- ── Legend ──────────────────────────────────────────────────── -->
+  <g transform="translate(620, 72)">
+    <rect x="0" y="0" width="240" height="78" rx="6" fill="#1a1a1a" stroke="#2a2a2a"/>
+    <text x="12" y="18" class="legendT">LEGEND</text>
+    <rect x="12" y="26" width="12" height="12" rx="3" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="30" y="36" class="legendL">Code / DB / channel send</text>
+    <rect x="12" y="44" width="12" height="12" rx="3" fill="#4738a0" stroke="#afa9ec"/>
+    <text x="30" y="54" class="legendL">LLM / agent loop</text>
+    <rect x="12" y="62" width="12" height="12" rx="3" fill="#5c4513" stroke="#e6a44e"/>
+    <text x="30" y="72" class="legendL">Trigger / customer touch</text>
+  </g>
+
+  <!-- ── Trigger ─────────────────────────────────────────────────── -->
+  <g transform="translate(280, 168)">
+    <rect width="320" height="48" rx="24" fill="#5c4513" stroke="#e6a44e"/>
+    <text x="160" y="22" text-anchor="middle" class="boxT">CRON · daily 9am tenant-local</text>
+    <text x="160" y="38" text-anchor="middle" class="boxS">Booking Reminder Agent (BR) wakes up</text>
+  </g>
+  <line x1="440" y1="216" x2="440" y2="244" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#cf-ar)"/>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1 · SCHEDULED OUTBOUND                                -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <g transform="translate(40, 246)">
+    <rect width="800" height="44" rx="8" fill="#FF7518"/>
+    <text x="16" y="28" class="secT">SCHEDULED OUTBOUND — BR owns this</text>
+    <text x="780" y="28" text-anchor="end" class="secS">no LLM in send path · template-only · deterministic</text>
+  </g>
+
+  <!-- Step 1 — query bookings -->
+  <g transform="translate(80, 308)">
+    <rect width="720" height="56" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">1.  Query bookings due tomorrow</text>
+    <text x="14" y="38" class="boxM">tunder booking list --date=tomorrow</text>
+    <text x="14" y="54" class="boxS">SELECT id, contact_id, time, clinic FROM bookings WHERE date = CURRENT_DATE + 1</text>
+  </g>
+  <line x1="440" y1="364" x2="440" y2="384" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#cf-ar)"/>
+
+  <!-- Step 2 — dedup -->
+  <g transform="translate(80, 386)">
+    <rect width="720" height="46" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">2.  Dedup against outbound_log</text>
+    <text x="14" y="38" class="boxS">skip if (booking_id, "reminder", today) already sent — survives cron retries</text>
+  </g>
+  <line x1="440" y1="432" x2="440" y2="452" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#cf-ar)"/>
+
+  <!-- Step 3 — template -->
+  <g transform="translate(80, 454)">
+    <rect width="720" height="56" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">3.  Render template (no LLM)</text>
+    <text x="14" y="38" class="boxM">Hi {name}, your appt is tomorrow at {time} at {clinic} clinic.</text>
+    <text x="14" y="54" class="boxS">fixed wording · auditable · zero token cost</text>
+  </g>
+  <line x1="440" y1="510" x2="440" y2="530" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#cf-ar)"/>
+
+  <!-- Step 4 — insert outgoing message -->
+  <g transform="translate(80, 532)">
+    <rect width="720" height="62" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">4.  Insert outgoing message row</text>
+    <text x="14" y="38" class="boxM">messages: direction="outgoing", sender_agent_id=BR.id,</text>
+    <text x="14" y="54" class="boxM">          conversation_assignee=CS.id   ← decides who answers the reply</text>
+  </g>
+  <line x1="440" y1="594" x2="440" y2="614" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#cf-ar)"/>
+
+  <!-- Step 5 — channel send -->
+  <g transform="translate(80, 616)">
+    <rect width="720" height="46" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">5.  chat_now channel layer → WhatsApp Cloud API</text>
+    <text x="14" y="38" class="boxS">existing sender · uses inbox's phone_number_id + access token (same as CS would)</text>
+  </g>
+  <line x1="440" y1="662" x2="440" y2="682" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#cf-ar)"/>
+
+  <!-- Customer phone — outbound delivery -->
+  <g transform="translate(280, 684)">
+    <rect width="320" height="46" rx="23" fill="#5c4513" stroke="#e6a44e"/>
+    <text x="160" y="20" text-anchor="middle" class="boxT" font-size="13">Customer phone · message delivered</text>
+    <text x="160" y="36" text-anchor="middle" class="boxS">"Hi Sara, your appt is tomorrow at 10:00 …"</text>
+  </g>
+  <line x1="440" y1="730" x2="440" y2="754" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#cf-ar)"/>
+
+  <!-- Step 6 — write outbound_log -->
+  <g transform="translate(120, 756)">
+    <rect width="640" height="46" rx="8" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">6.  On 2xx → INSERT outbound_log (booking_id, "reminder", today)</text>
+    <text x="14" y="38" class="boxS">idempotency key — next cron run for the same booking is a no-op</text>
+  </g>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2 · INTERACTIVE REPLY                                 -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <g transform="translate(40, 840)">
+    <rect width="800" height="44" rx="8" fill="#FF7518"/>
+    <text x="16" y="28" class="secT">INTERACTIVE REPLY — CS owns this (unchanged)</text>
+    <text x="780" y="28" text-anchor="end" class="secS">inbox owner handles inbound · BR never reads webhooks</text>
+  </g>
+
+  <!-- Customer reply trigger -->
+  <g transform="translate(280, 902)">
+    <rect width="320" height="46" rx="23" fill="#5c4513" stroke="#e6a44e"/>
+    <text x="160" y="20" text-anchor="middle" class="boxT" font-size="13">Customer replies</text>
+    <text x="160" y="36" text-anchor="middle" class="boxS">"can I move it to 11?"</text>
+  </g>
+  <line x1="440" y1="948" x2="440" y2="968" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#cf-ar)"/>
+
+  <!-- Webhook -->
+  <g transform="translate(80, 970)">
+    <rect width="720" height="46" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">WhatsApp webhook → /webhooks/whatsapp</text>
+    <text x="14" y="38" class="boxS">resolve inbox by phone_number_id → forward inbound to inbox.reply_agent</text>
+  </g>
+  <line x1="440" y1="1016" x2="440" y2="1036" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#cf-ar)"/>
+
+  <!-- Routing -->
+  <g transform="translate(80, 1038)">
+    <rect width="720" height="46" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">inbox.reply_agent = customer-service</text>
+    <text x="14" y="38" class="boxS">unchanged default · BR was never registered as a reply handler</text>
+  </g>
+  <line x1="440" y1="1084" x2="440" y2="1104" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#cf-ar)"/>
+
+  <!-- CS agent box (purple, LLM) -->
+  <g transform="translate(80, 1106)">
+    <rect width="720" height="140" rx="8" fill="#4738a0" stroke="#afa9ec"/>
+    <text x="20" y="24" class="boxT">Customer Service Agent · MCP runtime</text>
+    <rect x="560" y="14" width="140" height="22" rx="11" fill="#2d2275"/>
+    <text x="630" y="29" text-anchor="middle" class="badge">replies · FAQ · MCP tools</text>
+
+    <g transform="translate(20, 50)">
+      <rect width="680" height="34" rx="4" fill="#2d2275" stroke="#afa9ec" stroke-opacity="0.4"/>
+      <text x="14" y="21" class="boxM">reads full thread (incl. BR's reminder) · routes through skill / FAQ search</text>
+    </g>
+    <g transform="translate(20, 92)">
+      <rect width="680" height="34" rx="4" fill="#2d2275" stroke="#afa9ec" stroke-opacity="0.4"/>
+      <text x="14" y="21" class="boxM">mcp__chat_now__send_message(contact_id, content, …)</text>
+    </g>
+  </g>
+  <line x1="440" y1="1246" x2="440" y2="1266" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#cf-ar)"/>
+
+  <!-- Customer phone — reply received -->
+  <g transform="translate(280, 1268)">
+    <rect width="320" height="46" rx="23" fill="#5c4513" stroke="#e6a44e"/>
+    <text x="160" y="20" text-anchor="middle" class="boxT" font-size="13">Customer phone · reply arrives</text>
+    <text x="160" y="36" text-anchor="middle" class="boxS">"Sure, moved to 11:00 — confirmed."</text>
+  </g>
+
+  <!-- ── Role-split summary ──────────────────────────────────────── -->
+  <g transform="translate(40, 1350)">
+    <rect width="800" height="184" rx="8" fill="#1a1a1a" stroke="#2a2a2a"/>
+    <text x="16" y="26" class="boxT">Role split, concretely</text>
+
+    <text x="16" y="62" class="decisionK">BR    ·</text>
+    <text x="88" y="62" class="decisionV">Tunder runtime · scheduled outbound only · template messages · no webhook handling</text>
+
+    <text x="16" y="90" class="decisionK">CS    ·</text>
+    <text x="88" y="90" class="decisionV">MCP runtime · owns inbox.reply_agent · handles all inbound · can also send</text>
+
+    <text x="16" y="118" class="decisionK">key   ·</text>
+    <text x="88" y="118" class="decisionV">conversation_assignee on each outgoing message decides who answers the reply</text>
+
+    <text x="16" y="146" class="decisionK">dedup ·</text>
+    <text x="88" y="146" class="decisionV">outbound_log (booking_id, kind, date) — primary key prevents double sends</text>
+
+    <text x="16" y="172" class="annot">Same WhatsApp number, two origins. Replies always land on CS — BR is fire-and-forget.</text>
+  </g>
+
+  <!-- ── Bottom insight ──────────────────────────────────────────── -->
+  <g transform="translate(40, 1554)">
+    <rect width="800" height="70" rx="6" fill="#1a1a1a" stroke="#2a2a2a"/>
+    <text x="400" y="22" text-anchor="middle" class="boxT" font-size="13">Outbound-initiated vs Inbound-reply — the natural separation</text>
+    <text x="400" y="42" text-anchor="middle" class="boxS">BR knows bookings · CS knows conversations · neither needs to know what the other does</text>
+    <text x="400" y="58" text-anchor="middle" class="boxS">Same pattern as Twilio (broadcast SMS vs support webhook) and transactional vs conversational email</text>
+  </g>
+</svg>

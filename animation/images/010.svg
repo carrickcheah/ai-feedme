@@ -1,0 +1,217 @@
+<svg width="100%" viewBox="0 0 880 1080" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, system-ui, sans-serif">
+  <defs>
+    <marker id="m10-ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#9c9a92" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="m10-ar-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#F08531" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="m10-ar-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#e07a7a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      .title    { font-size: 18px; font-weight: 700; fill: #fff; }
+      .subtitle { font-size: 12px; fill: #b4b2a9; }
+      .secT     { font-size: 16px; font-weight: 700; fill: #fff; letter-spacing: 0.4px; }
+      .secS     { font-size: 11px; fill: rgba(255,255,255,0.78); }
+      .boxT     { font-size: 14px; font-weight: 600; fill: #fff; }
+      .boxS     { font-size: 11px; fill: rgba(255,255,255,0.78); }
+      .boxM     { font-size: 11px; fill: rgba(255,255,255,0.82); font-family: ui-monospace, SFMono-Regular, monospace; }
+      .exitT    { font-size: 11px; font-weight: 600; fill: #fff; }
+      .exitM    { font-size: 11px; fill: rgba(255,255,255,0.85); font-family: ui-monospace, SFMono-Regular, monospace; }
+      .annot    { font-size: 11px; fill: #c2c0b6; }
+      .accentK  { font-size: 13px; font-weight: 700; fill: #F08531; font-family: ui-monospace, SFMono-Regular, monospace; }
+    </style>
+  </defs>
+
+  <!-- Dark canvas (matches 003.svg) -->
+  <rect width="880" height="1080" fill="#0f0f0f"/>
+
+  <!-- ── Title ───────────────────────────────────────────────────── -->
+  <text x="440" y="34" text-anchor="middle" class="title">Evaluation · Two stages, three grading methods</text>
+  <text x="440" y="54" text-anchor="middle" class="subtitle">Staging catches known bugs before deploy · Production teaches you about the unknown ones after</text>
+
+  <!-- ── Question pill ───────────────────────────────────────────── -->
+  <g transform="translate(280, 80)">
+    <rect width="320" height="48" rx="24" fill="#5c4513" stroke="#e6a44e"/>
+    <text x="160" y="22" text-anchor="middle" class="boxT">How do I know the AI answers correctly?</text>
+    <text x="160" y="38" text-anchor="middle" class="boxS">10 · Evaluation · Tier B · operational</text>
+  </g>
+  <line x1="440" y1="128" x2="440" y2="156" stroke="#9c9a92" stroke-width="1.5" marker-end="url(#m10-ar)"/>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1 · STAGING (offline)                                -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <g transform="translate(40, 160)">
+    <rect width="800" height="44" rx="8" fill="#FF7518"/>
+    <text x="16" y="28" class="secT">STAGING — offline, runs in CI before deploy</text>
+    <text x="780" y="28" text-anchor="end" class="secS">frozen test sets · same input → same expected output</text>
+  </g>
+
+  <!-- Row 1 · Golden tests -->
+  <g transform="translate(60, 220)">
+    <rect width="520" height="46" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">1.  Golden tests</text>
+    <text x="14" y="38" class="boxS">frozen Q → expected pairs · catches “did X regress?”</text>
+  </g>
+  <line x1="580" y1="243" x2="612" y2="243" stroke="#F08531" stroke-width="1.5" marker-end="url(#m10-ar-o)"/>
+  <g transform="translate(615, 220)">
+    <rect width="200" height="46" rx="6" fill="#5c4513" stroke="#e6a44e" stroke-opacity="0.55"/>
+    <text x="12" y="20" class="exitT">tool →</text>
+    <text x="56" y="20" class="exitM">promptfoo</text>
+    <text x="12" y="38" class="boxS">runs every push in CI</text>
+  </g>
+
+  <!-- Row 2 · Regression -->
+  <g transform="translate(60, 278)">
+    <rect width="520" height="46" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">2.  Regression</text>
+    <text x="14" y="38" class="boxS">re-run golden set, compare scores vs last run · drift detector</text>
+  </g>
+  <line x1="580" y1="301" x2="612" y2="301" stroke="#F08531" stroke-width="1.5" marker-end="url(#m10-ar-o)"/>
+  <g transform="translate(615, 278)">
+    <rect width="200" height="46" rx="6" fill="#5c4513" stroke="#e6a44e" stroke-opacity="0.55"/>
+    <text x="12" y="20" class="exitT">tool →</text>
+    <text x="56" y="20" class="exitM">promptfoo</text>
+    <text x="12" y="38" class="boxS">vs baseline scores</text>
+  </g>
+
+  <!-- Row 3 · Red-team / safety -->
+  <g transform="translate(60, 336)">
+    <rect width="520" height="46" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">3.  Red-team / safety</text>
+    <text x="14" y="38" class="boxS">prompt injection · PII probes · jailbreak attempts</text>
+  </g>
+  <line x1="580" y1="359" x2="612" y2="359" stroke="#F08531" stroke-width="1.5" marker-end="url(#m10-ar-o)"/>
+  <g transform="translate(615, 336)">
+    <rect width="200" height="46" rx="6" fill="#5c4513" stroke="#e6a44e" stroke-opacity="0.55"/>
+    <text x="12" y="20" class="exitT">tool →</text>
+    <text x="56" y="20" class="exitM">promptfoo</text>
+    <text x="12" y="38" class="boxS">attack prompt library</text>
+  </g>
+
+  <!-- Row 4 · Model comparison -->
+  <g transform="translate(60, 394)">
+    <rect width="520" height="46" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">4.  Model comparison</text>
+    <text x="14" y="38" class="boxS">same tests across deepseek vs anthropic · pick cheapest passing model</text>
+  </g>
+  <line x1="580" y1="417" x2="612" y2="417" stroke="#F08531" stroke-width="1.5" marker-end="url(#m10-ar-o)"/>
+  <g transform="translate(615, 394)">
+    <rect width="200" height="46" rx="6" fill="#5c4513" stroke="#e6a44e" stroke-opacity="0.55"/>
+    <text x="12" y="20" class="exitT">tool →</text>
+    <text x="56" y="20" class="exitM">promptfoo</text>
+    <text x="12" y="38" class="boxS">cost vs quality</text>
+  </g>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2 · PRODUCTION (online)                              -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <g transform="translate(40, 460)">
+    <rect width="800" height="44" rx="8" fill="#FF7518"/>
+    <text x="16" y="28" class="secT">PRODUCTION — online, runs against real traffic</text>
+    <text x="780" y="28" text-anchor="end" class="secS">noisy signals · catches what staging cannot</text>
+  </g>
+
+  <!-- Row 1 · Live reply sampling (LLM-judged → purple) -->
+  <g transform="translate(60, 520)">
+    <rect width="520" height="46" rx="6" fill="#4738a0" stroke="#afa9ec"/>
+    <text x="14" y="20" class="boxT">5.  Live reply sampling</text>
+    <text x="14" y="38" class="boxS">grade a % of real replies · 2nd model judges or human reviews</text>
+  </g>
+  <line x1="580" y1="543" x2="612" y2="543" stroke="#F08531" stroke-width="1.5" marker-end="url(#m10-ar-o)"/>
+  <g transform="translate(615, 520)">
+    <rect width="200" height="46" rx="6" fill="#5c4513" stroke="#e6a44e" stroke-opacity="0.55"/>
+    <text x="12" y="20" class="exitT">tool →</text>
+    <text x="56" y="20" class="exitM">custom + LLM</text>
+    <text x="12" y="38" class="boxS">runs continuously</text>
+  </g>
+
+  <!-- Row 2 · CSAT / feedback (human signal → yellow/brown left) -->
+  <g transform="translate(60, 578)">
+    <rect width="520" height="46" rx="6" fill="#5c4513" stroke="#e6a44e"/>
+    <text x="14" y="20" class="boxT">6.  CSAT / feedback</text>
+    <text x="14" y="38" class="boxS">thumbs up/down · survey scores · direct user signal</text>
+  </g>
+  <line x1="580" y1="601" x2="612" y2="601" stroke="#F08531" stroke-width="1.5" marker-end="url(#m10-ar-o)"/>
+  <g transform="translate(615, 578)">
+    <rect width="200" height="46" rx="6" fill="#5c4513" stroke="#e6a44e" stroke-opacity="0.55"/>
+    <text x="12" y="20" class="exitT">tool →</text>
+    <text x="56" y="20" class="exitM">CSAT pipe</text>
+    <text x="12" y="38" class="boxS">from the user, not us</text>
+  </g>
+
+  <!-- Row 3 · Inline verifier (code in the loop → green) -->
+  <g transform="translate(60, 636)">
+    <rect width="520" height="46" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">7.  Inline verifier</text>
+    <text x="14" y="38" class="boxS">in-loop check → regenerate if fail · catches bad answers BEFORE sending</text>
+  </g>
+  <line x1="580" y1="659" x2="612" y2="659" stroke="#F08531" stroke-width="1.5" marker-end="url(#m10-ar-o)"/>
+  <g transform="translate(615, 636)">
+    <rect width="200" height="46" rx="6" fill="#5c4513" stroke="#e6a44e" stroke-opacity="0.55"/>
+    <text x="12" y="20" class="exitT">tool →</text>
+    <text x="56" y="20" class="exitM">code (Step 5)</text>
+    <text x="12" y="38" class="boxS">per-reply · blocking</text>
+  </g>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3 · GRADING METHODS (how to score a fuzzy answer)    -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <g transform="translate(40, 702)">
+    <rect width="800" height="44" rx="8" fill="#FF7518"/>
+    <text x="16" y="28" class="secT">GRADING METHODS — how to score a fuzzy answer</text>
+    <text x="780" y="28" text-anchor="end" class="secS">AI is probabilistic · match the method to the question</text>
+  </g>
+
+  <!-- Method 1 · Exact / keyword (code → green) -->
+  <g transform="translate(60, 762)">
+    <rect width="520" height="46" rx="6" fill="#1e4633" stroke="#86c9aa"/>
+    <text x="14" y="20" class="boxT">📏  Exact / keyword</text>
+    <text x="14" y="38" class="boxS">does the output contain “RM120”? · pure string match</text>
+  </g>
+  <line x1="580" y1="785" x2="612" y2="785" stroke="#F08531" stroke-width="1.5" marker-end="url(#m10-ar-o)"/>
+  <g transform="translate(615, 762)">
+    <rect width="200" height="46" rx="6" fill="#5c4513" stroke="#e6a44e" stroke-opacity="0.55"/>
+    <text x="12" y="20" class="exitT">speed →</text>
+    <text x="64" y="20" class="exitM">instant</text>
+    <text x="12" y="38" class="boxS">best for hard facts</text>
+  </g>
+
+  <!-- Method 2 · LLM-as-judge (LLM → purple) -->
+  <g transform="translate(60, 820)">
+    <rect width="520" height="46" rx="6" fill="#4738a0" stroke="#afa9ec"/>
+    <text x="14" y="20" class="boxT">🧠  LLM-as-judge</text>
+    <text x="14" y="38" class="boxS">2nd model rates correctness, tone, completeness</text>
+  </g>
+  <line x1="580" y1="843" x2="612" y2="843" stroke="#F08531" stroke-width="1.5" marker-end="url(#m10-ar-o)"/>
+  <g transform="translate(615, 820)">
+    <rect width="200" height="46" rx="6" fill="#5c4513" stroke="#e6a44e" stroke-opacity="0.55"/>
+    <text x="12" y="20" class="exitT">speed →</text>
+    <text x="64" y="20" class="exitM">fast</text>
+    <text x="12" y="38" class="boxS">best for meaning</text>
+  </g>
+
+  <!-- Method 3 · Human grade (human → yellow/brown) -->
+  <g transform="translate(60, 878)">
+    <rect width="520" height="46" rx="6" fill="#5c4513" stroke="#e6a44e"/>
+    <text x="14" y="20" class="boxT">👤  Human grade</text>
+    <text x="14" y="38" class="boxS">a person reviews &amp; rates · the gold standard</text>
+  </g>
+  <line x1="580" y1="901" x2="612" y2="901" stroke="#F08531" stroke-width="1.5" marker-end="url(#m10-ar-o)"/>
+  <g transform="translate(615, 878)">
+    <rect width="200" height="46" rx="6" fill="#5c4513" stroke="#e6a44e" stroke-opacity="0.55"/>
+    <text x="12" y="20" class="exitT">speed →</text>
+    <text x="64" y="20" class="exitM">slow</text>
+    <text x="12" y="38" class="boxS">best for edge cases</text>
+  </g>
+
+  <!-- ── Closing insight (matches 003's closing card style) ──────── -->
+  <g transform="translate(40, 952)">
+    <rect width="800" height="100" rx="6" fill="#1a1a1a" stroke="#2a2a2a"/>
+    <text x="400" y="26" text-anchor="middle" class="boxT" font-size="13">Staging proves what you've thought of · Production teaches what you haven't</text>
+    <text x="400" y="48" text-anchor="middle" class="boxS">Today: <tspan class="accentK">red-team + golden in CI</tspan> · Next build: <tspan class="accentK">production sampling + CSAT loop</tspan></text>
+    <text x="400" y="66" text-anchor="middle" class="boxS">Same harness shape as control flow: cheap deterministic checks first, expensive non-deterministic checks last.</text>
+    <text x="400" y="88" text-anchor="middle" class="annot">"I can prove the agent is safe and cheap today; proving it's measurably accurate over time is what I build next."</text>
+  </g>
+</svg>

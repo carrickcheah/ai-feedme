@@ -385,8 +385,11 @@
       killer: "The AI can ask. It cannot decide. Code holds the lock, not the prompt." },
 
     { n: 5, tier: "A", name: "Control Flow", q: "Should the agent act, ask, retry, or stop?",
-      image: "images/003.svg",
-      imageAlt: "Control flow diagram — 6 cheap gates before the LLM, bounded loop inside, with the four decisions (Act / Ask / Retry / Stop) summarized at the bottom",
+      image: ["images/009.svg", "images/003.svg"],
+      imageAlt: [
+        "Booking Reminders — Outbound by BR, replies handled by CS (control-flow example)",
+        "Control flow diagram — 6 cheap gates before the LLM, bounded loop inside, with the four decisions (Act / Ask / Retry / Stop) summarized at the bottom"
+      ],
       simple: "The decision logic around the agent loop — when to invoke the model, when to call a tool, when to retry, when to stop. Front-loaded: cheap deterministic checks first, the expensive non-deterministic LLM last.",
       how: [
         "6 gates run BEFORE the LLM (self-msg, validation, dedup, lock, human-check, credit-gate) → reject most work cheaply.",
@@ -545,11 +548,15 @@
     inner.appendChild(el("div", "d-q", c.q));
 
     if (c.image) {
-      const img = el("img", "d-image");
-      img.src = c.image;
-      img.alt = c.imageAlt || c.name;
-      img.loading = "lazy";
-      inner.appendChild(img);
+      const srcs = Array.isArray(c.image) ? c.image : [c.image];
+      const alts = Array.isArray(c.imageAlt) ? c.imageAlt : [c.imageAlt];
+      srcs.forEach((src, i) => {
+        const img = el("img", "d-image");
+        img.src = src;
+        img.alt = alts[i] || alts[0] || c.name;
+        img.loading = "lazy";
+        inner.appendChild(img);
+      });
     }
 
     if (c.diagram) {
